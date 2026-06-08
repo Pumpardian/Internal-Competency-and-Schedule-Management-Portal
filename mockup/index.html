@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head> 
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Портал Отдела цифровизации — макет</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- React + ReactDOM + Babel (CDN). Babel - нужен, чтобы React не компилить, потом избавиться нужно от него, но для макета - само то.
+       Код React встроен ниже, а не вынесен в отдельный файл, - специально(из vsc хреново открывается, если отдельно выношу, хз чзх)-->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react">
+const { useState, useMemo, useCallback } = React;
+
+// Тестовые данные  
+const INITIAL_EMPLOYEES = [
+  { id: 1, name: "Иванов И.И.", position: "инженер-программист" },
+  { id: 2, name: "Петрова А.С.", position: "аналитик" },
+  { id: 3, name: "Сидоров П.К.", position: "DevOps-инженер" },
+  { id: 4, name: "Кузнецова М.В.", position: "frontend-разработчик" },
+];
+
+const INITIAL_SKILLS = [
+  { id: 1, name: "Python", category: "язык" },
+  { id: 2, name: "React", category: "инструмент" },
+  { id: 3, name: "PostgreSQL", category: "СУБД" },
+  { id: 4, name: "Docker", category: "инструмент" },
+  { id: 5, name: "TypeScript", category: "язык" },
+];
+
+// уровни владения: ключ `${empId}-${skillId}` -> 0..5
+const INITIAL_LEVELS = {
+  "1-1": 5, "1-2": 2, "1-3": 4, "1-4": 3, "1-5": 1,
+  "2-1": 3, "2-2": 0, "2-3": 5, "2-4": 2, "2-5": 4,
+  "3-1": 4, "3-2": 1, "3-3": 3, "3-4": 5, "3-5": 0,
+  "4-1": 1, "4-2": 5, "4-3": 2, "4-4": 2, "4-5": 5,
+};
+
+// Тепловая карта уровней (0 — нет, 5 — эксперт)
+const HEAT = ["#ffffff", "#edf8e9", "#c7e9c0", "#74c476", "#41ab5d", "#006d2c"];
+const HEAT_TEXT = ["#bbbbbb", "#1f1f1f", "#1f1f1f", "#ffffff", "#ffffff", "#ffffff"];
+
+const INITIAL_BOOKINGS = [
+  { id: 1, topic: "Планёрка", empId: 1, startH: 9, startM: 0, endH: 10, endM: 0 },
+  { id: 2, topic: "Демо проекта", empId: 2, startH: 11, startM: 0, endH: 12, endM: 30 },
+];
+
+const CAL_START = 9;   // календарь с 9:00
+const CAL_END = 18;    // до 18:00
+const HOUR_PX = 60;    // высота одного часа
+
+// Уведомления 
+function useToasts() {
+  const [toasts, setToasts] = useState([]);
+  const push = useCallback((t) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { ...t, id }]);
+    setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), 4000);
+  }, []);
+  return { toasts, push };
+}
+
+function Toasts({ toasts }) {
+  return (
+    <div className="toasts">
+      {toasts.map((t) => (
+        <div key={t.id} className={"toast" + (t.type === "error" ? " error" : "")}>
+          <div className={"t-title" + (t.type === "error" ? " error" : "")}>{t.title}</div>
+          <div className="t-msg">{t.msg}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+//  Шапка 
+function Header({ page, setPage, user, setUser }) {
+  return (
+    <header className="header">
+      <span className="brand">Портал Отдела цифровизации</span>
+      <nav>
+        <button className={page === "team" ? "active" : ""} onClick={() => setPage("team")}>
+          Команда и навыки
+        </button>
+        <button className={page === "room" ? "active" : ""} onClick={() => setPage("room")}>
+          Переговорная
+        </button>
+      </nav>
+      <div className="user">
+        <span>X-User-Id:</span>
+        <select value={user} onChange={(e) => setUser(e.target.value)}>
+          <option value="admin">admin</option>
+          <option value="ivanov">ivanov</option>
+          <option value="petrova">petrova</option>
+        </select>
+      </div>
+    </header>
+  );
+}
+
+// Страница Команда и навыки
+function TeamPage({ employees, skills, levels, setLevels, push }) {
+  const [editing, setEditing] = useState(null); 
+  const [search, setSearch] = useState("");
+
+  const filtered = employees.filter((e) =>
+    e.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const setLevel = (empId, skillId, value) => {
+    setLevels((prev) => ({ ...prev, [empId + "-" + skillId]: value }));
+  };
+
+  return (
+    <div className="page">
+      <h1>Команда и навыки</h1>
+      <p className="subtitle">
+        Матрица компетенций сотрудников. Ячейка раскрашена по уровню владения (тепловая карта).
+        Клик по ячейке — изменение уровня. <span className="api-hint">PATCH /employees/&#123;id&#125;/skills/&#123;skid&#125;</span>
+      </p>
+
+      <div className="toolbar">
+        <button className="btn primary" onClick={() => push({ title: "Демо", msg: "Здесь откроется форма добавления сотрудника (POST /employees)." })}>
+          + Добавить сотрудника
+        </button>
+        <button className="btn" onClick={() => push({ title: "Демо", msg: "Здесь откроется форма добавления навыка (POST /skills)." })}>
+          + Добавить навык
+        </button>
+        <input
+          className="input search"
+          placeholder="Поиск сотрудника…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      <div className="card">
+        <table className="matrix">
+          <thead>
+            <tr>
+              <th className="corner">Сотрудник \ Навык</th>
+              {skills.map((s) => (
+                <th key={s.id}>
+                  {s.name}
+                  <div style={{ fontWeight: 400, fontSize: 11, color: "#999" }}>{s.category}</div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((emp) => (
+              <tr key={emp.id}>
+                <td className="emp">
+                  <div className="name">{emp.name}</div>
+                  <div className="pos">{emp.position}</div>
+                </td>
+                {skills.map((s) => {
+                  const lvl = levels[emp.id + "-" + s.id] ?? 0;
+                  const isEditing = editing && editing.empId === emp.id && editing.skillId === s.id;
+                  return (
+                    <td
+                      key={s.id}
+                      className="cell"
+                      style={{ background: HEAT[lvl], color: HEAT_TEXT[lvl] }}
+                      onClick={() => setEditing(isEditing ? null : { empId: emp.id, skillId: s.id })}
+                    >
+                      <span className="lvl">{lvl}</span>
+                      {isEditing && (
+                        <LevelPopover
+                          emp={emp}
+                          skill={s}
+                          value={lvl}
+                          onChange={(v) => setLevel(emp.id, s.id, v)}
+                          onClose={(committed) => {
+                            setEditing(null);
+                            if (committed) push({ title: "Уровень обновлён", msg: emp.name + " · " + s.name + " → " + committed });
+                          }}
+                        />
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="legend">
+          <span>Уровень владения:</span>
+          {HEAT.map((c, i) => (
+            <span key={i} className="sw" style={{ background: c, color: HEAT_TEXT[i] }}>{i}</span>
+          ))}
+          <span style={{ marginLeft: 8 }}>0 — отсутствует, 5 — эксперт</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LevelPopover({ emp, skill, value, onChange, onClose }) {
+  const [v, setV] = useState(value);
+  return (
+    <div className="popover" onClick={(e) => e.stopPropagation()}>
+      <div className="pv-title">{emp.name} · {skill.name}</div>
+      <input
+        type="range" min="0" max="5" step="1" value={v}
+        onChange={(e) => { const nv = +e.target.value; setV(nv); onChange(nv); }}
+      />
+      <div className="pv-row">
+        <span className="pv-val">{v}</span>
+        <button className="btn small primary" onClick={() => onClose(v)}>Готово</button>
+      </div>
+    </div>
+  );
+}
+
+// Переговорная
+function RoomPage({ employees, bookings, setBookings, push }) {
+  const [date, setDate] = useState("2026-06-08");
+  const [modal, setModal] = useState(null); 
+
+  const shiftDate = (delta) => {
+    const d = new Date(date);
+    d.setDate(d.getDate() + delta);
+    setDate(d.toISOString().slice(0, 10));
+  };
+
+  const toMin = (h, m) => h * 60 + m;
+  const overlaps = (a, b) =>
+    toMin(a.startH, a.startM) < toMin(b.endH, b.endM) &&
+    toMin(a.endH, a.endM) > toMin(b.startH, b.startM);
+
+  const createBooking = (data) => {
+    // типо серверная логика
+    const conflict = bookings.find((b) => overlaps(b, data));
+    if (conflict) {
+      push({
+        type: "error",
+        title: "409 Conflict",
+        msg: "Интервал пересекается с бронью «" + conflict.topic + "».",
+      });
+      return false;
+    }
+    const id = Math.max(0, ...bookings.map((b) => b.id)) + 1;
+    setBookings((prev) => [...prev, { ...data, id }]);
+    push({ title: "Бронь создана", msg: data.topic + " · 201 Created" });
+    return true;
+  };
+
+  const hours = [];
+  for (let h = CAL_START; h < CAL_END; h++) hours.push(h);
+
+  return (
+    <div className="page">
+      <h1>Переговорная</h1>
+      <p className="subtitle">
+        Календарный вид дня. Клик по свободному промежутку создаёт бронь. Конфликты времени отклоняются.
+      </p>
+
+      <div className="daybar">
+        <button className="btn" onClick={() => shiftDate(-1)}>◀</button>
+        <span className="date">{date}</span>
+        <button className="btn" onClick={() => shiftDate(1)}>▶</button>
+        <span className="api-hint">GET /bookings?date={date}</span>
+      </div>
+
+      <div className="card" style={{ padding: 0 }}>
+        <div className="calendar">
+          {hours.map((h) => (
+            <div className="cal-row" key={h}>
+              <div className="cal-time">{String(h).padStart(2, "0")}:00</div>
+              <div
+                className="cal-track"
+                onClick={() => setModal({ startH: h, startM: 0, endH: h + 1, endM: 0 })}
+              >
+                <div className="slot-hit" />
+              </div>
+            </div>
+          ))}
+
+          {/* Слой событий поверх сетки */}
+          <div style={{ position: "absolute", top: 0, left: 64, right: 0, bottom: 0, pointerEvents: "none" }}>
+            {bookings.map((b) => {
+              const top = (b.startH + b.startM / 60 - CAL_START) * HOUR_PX;
+              const height = (b.endH + b.endM / 60 - b.startH - b.startM / 60) * HOUR_PX;
+              const emp = employees.find((e) => e.id === b.empId);
+              const color = b.empId % 2 ? "#1677ff" : "#52c41a";
+              return (
+                <div
+                  key={b.id} 
+                  className="event"
+                  style={{ top, height, background: color, pointerEvents: "auto" }}
+                >
+                  <span
+                    className="ev-del"
+                    title="Отменить (DELETE /bookings/{id})"
+                    onClick={() => {
+                      setBookings((prev) => prev.filter((x) => x.id !== b.id));
+                      push({ title: "Бронь отменена", msg: b.topic });
+                    }}
+                  >×</span>
+                  <div className="ev-title">{b.topic}</div>
+                  <div className="ev-meta">
+                    {fmt(b.startH, b.startM)} – {fmt(b.endH, b.endM)} · {emp ? emp.name : "—"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {modal && (
+        <BookingModal
+          employees={employees}
+          date={date}
+          init={modal}
+          onClose={() => setModal(null)}
+          onSubmit={(data) => {
+            const ok = createBooking(data);
+            if (ok) setModal(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function fmt(h, m) {
+  return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+}
+
+function BookingModal({ employees, date, init, onClose, onSubmit }) {
+  const [topic, setTopic] = useState("");
+  const [empId, setEmpId] = useState(employees[0].id);
+  const [start, setStart] = useState(fmt(init.startH, init.startM));
+  const [end, setEnd] = useState(fmt(init.endH, init.endM));
+  const [err, setErr] = useState("");
+
+  const submit = () => {
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = end.split(":").map(Number);
+    if (!topic.trim()) { setErr("Укажите тему встречи."); return; }
+    if (eh * 60 + em <= sh * 60 + sm) { setErr("Время окончания должно быть позже начала."); return; }
+    onSubmit({ topic: topic.trim(), empId: +empId, startH: sh, startM: sm, endH: eh, endM: em });
+  };
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="m-head">Новая бронь · {date}</div>
+        <div className="m-body">
+          <div>
+            <label>Тема встречи</label>
+            <input className="input" style={{ width: "100%" }} value={topic}
+              autoFocus placeholder="Например: Обсуждение спринта"
+              onChange={(e) => setTopic(e.target.value)} />
+          </div>
+          <div>
+            <label>Сотрудник</label>
+            <select className="input" style={{ width: "100%" }} value={empId}
+              onChange={(e) => setEmpId(e.target.value)}>
+              {employees.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
+            </select>
+          </div>
+          <div style={{ display: "flex", gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label>Начало</label>
+              <input className="input" type="time" style={{ width: "100%" }} value={start}
+                onChange={(e) => setStart(e.target.value)} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label>Окончание</label>
+              <input className="input" type="time" style={{ width: "100%" }} value={end}
+                onChange={(e) => setEnd(e.target.value)} />
+            </div>
+          </div>
+          {err && <div style={{ color: "var(--danger)", fontSize: 13 }}>{err}</div>}
+        </div>
+        <div className="m-foot">
+          <button className="btn" onClick={onClose}>Отмена</button>
+          <button className="btn primary" onClick={submit}>Сохранить</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// апка 
+function App() {
+  const [page, setPage] = useState("team");
+  const [user, setUser] = useState("admin");
+  const [employees] = useState(INITIAL_EMPLOYEES);
+  const [skills] = useState(INITIAL_SKILLS);
+  const [levels, setLevels] = useState(INITIAL_LEVELS);
+  const [bookings, setBookings] = useState(INITIAL_BOOKINGS);
+  const { toasts, push } = useToasts();
+
+  return (
+    <React.Fragment>
+      <Header page={page} setPage={setPage} user={user} setUser={setUser} />
+      <div className="mock-note">
+        Это визуальный макет (Этап 1). Данные тестовые, не в бд; реальные вызовы API будут добавлены на этапах 3–4.
+      </div>
+      {page === "team" ? (
+        <TeamPage employees={employees} skills={skills} levels={levels} setLevels={setLevels} push={push} />
+      ) : (
+        <RoomPage employees={employees} bookings={bookings} setBookings={setBookings} push={push} />
+      )}
+      <Toasts toasts={toasts} />
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<mxfile host="app.diagrams.net" agent="Claude" version="24.0.0" type="device">
+  <diagram id="er-db" name="ER-диаграмма БД">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Заголовок -->
+        <mxCell id="title" value="ER-диаграмма БД «Внутренний портал управления компетенциями и расписанием» (PostgreSQL)" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="900" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== Employee ===================== -->
+        <mxCell id="emp" value="Employee — Сотрудник" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;swimlaneFillColor=#FFFFFF;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="200" width="260" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="emp-id" value="PK  id : SERIAL" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontStyle=4;rotatable=0;portConstraint=eastwest;fontSize=12;" vertex="1" parent="emp">
+          <mxGeometry y="26" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="emp-ln" value="last_name : VARCHAR(100)  NOT NULL" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=12;" vertex="1" parent="emp">
+          <mxGeometry y="48" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="emp-fn" value="first_name : VARCHAR(100)  NOT NULL" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=12;" vertex="1" parent="emp">
+          <mxGeometry y="70" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="emp-pos" value="position : VARCHAR(150)" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=12;" vertex="1" parent="emp">
+          <mxGeometry y="92" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="emp-photo" value="photo_url : VARCHAR(500)" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=12;" vertex="1" parent="emp">
+          <mxGeometry y="114" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="emp-created" value="created_at : TIMESTAMP  DEFAULT now()" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=12;" vertex="1" parent="emp">
+          <mxGeometry y="136" width="260" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="emp-idx" value="INDEX (last_name, first_name)" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;fontColor=#666666;" vertex="1" parent="emp">
+          <mxGeometry y="158" width="260" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== EmployeeSkill ===================== -->
+        <mxCell id="es" value="EmployeeSkill — Связь M:N (уровень)" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;swimlaneFillColor=#FFFFFF;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="460" y="180" width="300" height="158" as="geometry" />
+        </mxCell>
+        <mxCell id="es-id" value="PK  id : SERIAL" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontStyle=4;rotatable=0;fontSize=12;" vertex="1" parent="es">
+          <mxGeometry y="26" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="es-emp" value="FK  employee_id : INT -&gt; Employee.id" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=12;fontColor=#1f6f1f;" vertex="1" parent="es">
+          <mxGeometry y="48" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="es-skill" value="FK  skill_id : INT -&gt; Skill.id" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=12;fontColor=#1f6f1f;" vertex="1" parent="es">
+          <mxGeometry y="70" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="es-level" value="level : SMALLINT  CHECK (level BETWEEN 0 AND 5)" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;" vertex="1" parent="es">
+          <mxGeometry y="92" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="es-uniq" value="UNIQUE (employee_id, skill_id)" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;fontColor=#666666;" vertex="1" parent="es">
+          <mxGeometry y="114" width="300" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="es-idx" value="INDEX (skill_id), INDEX (employee_id)" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;fontColor=#666666;" vertex="1" parent="es">
+          <mxGeometry y="136" width="300" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== Skill ===================== -->
+        <mxCell id="skill" value="Skill — Навык" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;swimlaneFillColor=#FFFFFF;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="900" y="200" width="240" height="114" as="geometry" />
+        </mxCell>
+        <mxCell id="skill-id" value="PK  id : SERIAL" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontStyle=4;rotatable=0;fontSize=12;" vertex="1" parent="skill">
+          <mxGeometry y="26" width="240" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="skill-name" value="name : VARCHAR(150)  UNIQUE" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=12;" vertex="1" parent="skill">
+          <mxGeometry y="48" width="240" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="skill-cat" value="category : skill_category (ENUM)" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=12;" vertex="1" parent="skill">
+          <mxGeometry y="70" width="240" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="skill-enum" value="ENUM: язык / СУБД / инструмент / другое" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;fontColor=#666666;" vertex="1" parent="skill">
+          <mxGeometry y="92" width="240" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== Booking ===================== -->
+        <mxCell id="bk" value="Booking — Бронь переговорной" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;swimlaneFillColor=#FFFFFF;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="470" width="360" height="202" as="geometry" />
+        </mxCell>
+        <mxCell id="bk-id" value="PK  id : SERIAL" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;fontStyle=4;rotatable=0;fontSize=12;" vertex="1" parent="bk">
+          <mxGeometry y="26" width="360" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="bk-emp" value="FK  employee_id : INT -&gt; Employee.id" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=12;fontColor=#a01818;" vertex="1" parent="bk">
+          <mxGeometry y="48" width="360" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="bk-topic" value="topic : VARCHAR(255)  NOT NULL" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=12;" vertex="1" parent="bk">
+          <mxGeometry y="70" width="360" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="bk-start" value="start_time : TIMESTAMPTZ  NOT NULL" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=12;" vertex="1" parent="bk">
+          <mxGeometry y="92" width="360" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="bk-end" value="end_time : TIMESTAMPTZ  NOT NULL" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=12;" vertex="1" parent="bk">
+          <mxGeometry y="114" width="360" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="bk-chk" value="CHECK (end_time &gt; start_time)" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;fontColor=#666666;" vertex="1" parent="bk">
+          <mxGeometry y="136" width="360" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="bk-excl" value="EXCLUDE USING gist (tstzrange(start,end) WITH &amp;&amp;)" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;fontColor=#666666;" vertex="1" parent="bk">
+          <mxGeometry y="158" width="360" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="bk-idx" value="INDEX (start_time), INDEX (employee_id)" style="text;align=left;verticalAlign=middle;spacingLeft=6;overflow=hidden;rotatable=0;fontSize=11;fontColor=#666666;" vertex="1" parent="bk">
+          <mxGeometry y="180" width="360" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== Связи ===================== -->
+        <!-- Employee 1 -> N EmployeeSkill -->
+        <mxCell id="rel-emp-es" value="1 : N" style="edgeStyle=entityRelationEdgeStyle;fontSize=11;html=1;endArrow=ERmany;startArrow=ERone;rounded=0;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="emp" target="es">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Skill 1 -> N EmployeeSkill -->
+        <mxCell id="rel-skill-es" value="1 : N" style="edgeStyle=entityRelationEdgeStyle;fontSize=11;html=1;endArrow=ERmany;startArrow=ERone;rounded=0;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="skill" target="es">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Employee 1 -> N Booking -->
+        <mxCell id="rel-emp-bk" value="1 : N" style="edgeStyle=entityRelationEdgeStyle;fontSize=11;html=1;endArrow=ERmany;startArrow=ERone;rounded=0;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="emp" target="bk">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Легенда -->
+        <mxCell id="legend" value="Обозначения:&#10;PK — первичный ключ&#10;FK — внешний ключ&#10;UNIQUE / CHECK / EXCLUDE — ограничения целостности&#10;Миграции схемы выполняются через Alembic" style="text;html=1;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;fontSize=11;rounded=1;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#cccccc;" vertex="1" parent="1">
+          <mxGeometry x="460" y="420" width="360" height="100" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
