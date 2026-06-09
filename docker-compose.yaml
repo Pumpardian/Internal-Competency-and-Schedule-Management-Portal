@@ -1,10 +1,8 @@
-version: '3.8'
 services:
   postgres-db:
     image: postgres:17.6-bookworm
     container_name: postgres-database
-    env_file:
-      - docker.env
+    env_file: .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}

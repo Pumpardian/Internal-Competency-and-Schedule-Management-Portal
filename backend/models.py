@@ -1,19 +1,10 @@
-from sqlalchemy import create_engine
 from sqlalchemy.sql import func
-from sqlalchemy.orm import DeclarativeBase, relationship, sessionmaker, validates
+from sqlalchemy.orm import DeclarativeBase, validates
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Index \
 , CheckConstraint, UniqueConstraint, SmallInteger
 from sqlalchemy.dialects.postgresql import ENUM
-import os
 
-#ENGINE
-#CHANGE BACKUP ON COMPLETE DOCKER BUILD
-DB_CONNECTION_URL = os.getenv('DATABASE_URL', "postgresql://admin:practice2026@localhost:5432/pg") 
-engine = create_engine(DB_CONNECTION_URL)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-#MODELS
+#Модели
 class Base(DeclarativeBase): pass
 
 class Employee(Base):
@@ -26,12 +17,12 @@ class Employee(Base):
     photo_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
-    __table_args__ = {
-        Index("idx_employee_name", "last_name", "first_name")
-    }
+    __table_args__ = (
+        Index("idx_employee_name", "last_name", "first_name"),
+    )
 
 
-#ENUM for skill category
+#Перечисление для навыков категории
 skill_categories = [
     "language",
     "database",
@@ -41,7 +32,7 @@ skill_categories = [
     "other",
 ]
 enum_skill_category = ENUM(
-    skill_categories,
+    *skill_categories,
     name="skill_category",
     create_type=True
 )
@@ -81,9 +72,9 @@ class EmployeeSkill(Base):
         nullable=False
     )
 
-    __table_args__ = {
+    __table_args__ = (
         CheckConstraint("level BETWEEN 0 AND 5", name="check_level_range"),
         UniqueConstraint("employee_id", "skill_id", name="unique_employee_skill"),
         Index("idx_employee_skill_employee", "employee_id"),
         Index("idx_employee_skill_skill", "skill_id"),
-    }
+    )

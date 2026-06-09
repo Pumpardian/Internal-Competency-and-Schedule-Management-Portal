@@ -1,7 +1,7 @@
-from models import SessionLocal
+from database import SessionLocal
 
 def get_db():
-    '''Dependency to get Database session'''
+    '''Метод для получения сессии базы данных'''
     db = SessionLocal()
     try:
         yield db

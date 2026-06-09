@@ -6,9 +6,6 @@ from datetime import datetime
 
 from models import Employee, Skill, EmployeeSkill, skill_categories
 from dependencies import get_db
-from database import init_db
-
-init_db()
 
 app = FastAPI()
 
@@ -17,7 +14,9 @@ app = FastAPI()
 def get_employees(
     db: Session = Depends(get_db)
 ):
-    '''Get all employees'''
+    '''Получение списка всех сотрудников.
+    Не принимает параметров.
+    Возвращает список объектов Employee.'''
 
     statement = select(Employee)
     employees = db.execute(statement).scalars().all()
@@ -30,7 +29,12 @@ def get_employee(
     id: int,
     db: Session = Depends(get_db)
 ):
-    '''Get employee data with skils by id'''
+    '''Получение сотрудника по его id.
+    Принимает параметры:
+        -id целочисленного типа.
+    Возвращает:
+        -объект Employee, если существует таковой (код 200).
+        -ошибку 404 если сотрудник не найден.'''
 
     statement = select(Employee).where(Employee.id == id)
     employee = db.execute(statement).scalar_one_or_none()
@@ -51,7 +55,16 @@ def add_employee(
     photo_url:  str = Body(embed=True, default=None),
     db:     Session = Depends(get_db)
 ):
-    '''Add new employee'''
+    '''Добавление сотрудника.
+    Принимает параметры:
+        -first_name строчного типа (максимальная длина: 100).
+        -last_name строчного типа (максимальная длина: 100).
+        -position строчного типа (максимальная длина: 150).
+        -photo_url строчного типа (максимальная длина: 150).
+    Возвращает:
+        -созданный объект Employee, при успехе (код 201).
+        -ошибку 400 если first_name или last_name пустые, или при превышении максимальной длины параметров.
+        -ошибку 409 если сотрудник с таким полным именем уже существует.'''
     
     if not first_name or not len(first_name.strip()):
         raise HTTPException(
@@ -100,8 +113,8 @@ def add_employee(
     employee = Employee(
         first_name = first_name.strip(),
         last_name = last_name.strip(),
-        position = position.strip() if position else None,
-        photo_url = photo_url.strip() if position else None,
+        position = position.strip() if position is not None else None,
+        photo_url = photo_url.strip() if photo_url is not None else None,
         created_at = datetime.now()
     )
     db.add(employee)
@@ -119,7 +132,17 @@ def update_employee(
     photo_url:  str = Body(embed=True, default=None),
     db:     Session = Depends(get_db)
 ):
-    '''Update employee data'''
+    '''Обновляет данные сотрудника.
+    Принимает параметры:
+        -id целочисленного типа.
+        -first_name строчного типа (максимальная длина: 100).
+        -last_name строчного типа (максимальная длина: 100).
+        -position строчного типа (максимальная длина: 150).
+        -photo_url строчного типа (максимальная длина: 150).
+    Возвращает:
+        -обновленный объект Employee, при успехе (код 200).
+        -ошибку 400 при превышении максимальной длины параметров.
+        -ошибку 409 если сотрудник с таким полным именем уже существует.'''
     
     if first_name is not None and len(first_name.strip()) > 100:
         raise HTTPException(
@@ -129,7 +152,7 @@ def update_employee(
     if last_name is not None and len(last_name.strip()) > 100:
         raise HTTPException(
             status_code=400,
-            detail="First name must be less than 100 characters"
+            detail="Last name must be less than 100 characters"
         )
     if position is not None and len(position.strip()) > 150:
         raise HTTPException(
@@ -150,10 +173,19 @@ def update_employee(
             detail="Employee not found"
         )
 
+    conditions = []
+    if first_name is not None:
+        conditions.append(Employee.first_name == first_name.strip())
+    else:
+        conditions.append(Employee.first_name == employee.first_name)
+    if last_name is not None:
+        conditions.append(Employee.last_name == last_name.strip())
+    else:
+        conditions.append(Employee.last_name == employee.last_name)
     statement = select(Employee).where(
         and_(
-            Employee.first_name == first_name.strip(),
-            Employee.last_name == last_name.strip()
+            *conditions,
+            Employee.id != id
         )
     )
     exists = db.execute(statement).scalar_one_or_none()
@@ -163,10 +195,10 @@ def update_employee(
             detail=f"Employee with name {last_name} {first_name} already exists"
         )
 
-    employee.first_name = first_name.strip() if first_name else None,
-    employee.last_name = last_name.strip() if last_name else None,
-    employee.position = position.strip() if position else None,
-    employee.photo_url = photo_url.strip() if position else None,
+    employee.first_name = first_name.strip() if first_name is not None else employee.first_name,
+    employee.last_name = last_name.strip() if last_name is not None else employee.last_name,
+    employee.position = position.strip() if position is not None else employee.position,
+    employee.photo_url = photo_url.strip() if photo_url is not None else employee.photo_url,
 
     db.commit()
     db.refresh(employee)
@@ -178,7 +210,12 @@ def delete_employee(
     id: int,
     db: Session = Depends(get_db)
 ):
-    '''Delete employee by id'''
+    '''Удаляет сотрудника с указанным id из системы.
+    Принимает параметры:
+        -id целочисленного типа.
+    Возвращает:
+        -сообщение об успехе (код 200).
+        -ошибку 404 если сотрудник с таким id не существует.'''
 
     statement = select(Employee).where(Employee.id == id)
     employee = db.execute(statement).scalar_one_or_none()
@@ -197,7 +234,9 @@ def delete_employee(
 def get_skills(
     db: Session = Depends(get_db)
 ):
-    '''Get all skills'''
+    '''Получение списка всех навыков.
+    Не принимает параметров.
+    Возвращает список объектов Skill.'''
 
     statement = select(Skill)
     skills = db.execute(statement).scalars().all()
@@ -210,7 +249,12 @@ def get_skill(
     id: int,
     db: Session = Depends(get_db)
 ):
-    '''Get skill data by id'''
+    '''Получение навыка по его id.
+    Принимает параметры:
+        -id целочисленного типа.
+    Возвращает:
+        -объект Skill, если существует таковой (код 200).
+        -ошибку 404 если навык не найден.'''
 
     statement = select(Skill).where(Skill.id == id)
     skill = db.execute(statement).scalar_one_or_none()
@@ -229,14 +273,21 @@ def add_skill(
     category:  str = Body(embed=True),
     db:    Session = Depends(get_db)
 ):
-    '''Add new skill'''
+    '''Добавление навыка.
+    Принимает параметры:
+        -name строчного типа (максимальная длина: 100).
+        -category строчного типа.
+    Возвращает:
+        -созданный объект Skill, при успехе (код 201).
+        -ошибку 400 если name или category пустые, или при превышении максимальной длины параметров (или неверном имени категории).
+        -ошибку 409 если навык с таким названием уже существует.'''
     
     if not name or not len(name.strip()):
         raise HTTPException(
             status_code=400,
             detail="Skill name cannot be empty"
         )
-    if not category or category not in skill_categories:
+    if not category or category.strip().lower() not in skill_categories:
         raise HTTPException(
             status_code=400,
             detail="Invalid category"
@@ -257,7 +308,7 @@ def add_skill(
     try:
         skill = Skill(
             name = name.strip(),
-            category = category.strip()
+            category = category.strip().lower()
         )
         db.add(skill)
         db.commit()
@@ -272,7 +323,12 @@ def delete_skill(
     id: int,
     db: Session = Depends(get_db)
 ):
-    '''Delete skill by id'''
+    '''Удаляет навык с указанным id из системы.
+    Принимает параметры:
+        -id целочисленного типа.
+    Возвращает:
+        -сообщение об успехе (код 200).
+        -ошибку 404 если навык с таким id не существует.'''
 
     statement = select(Skill).where(Skill.id == id)
     skill = db.execute(statement).scalar_one_or_none()
@@ -292,7 +348,12 @@ def get_employee_skills(
     id: int,
     db: Session = Depends(get_db)
 ):
-    '''Get skills for an employee with id'''
+    '''Получение навыков сотрудника по его id.
+    Принимает параметры:
+        -id целочисленного типа.
+    Возвращает:
+        -список объектов Skill c дополнительным полем уровня владения (код 200).
+        -ошибку 404 если сотрудник не найден.'''
 
     statement = select(Employee).where(Employee.id == id)
     employee = db.execute(statement).scalar_one_or_none()
@@ -315,19 +376,37 @@ def get_employee_skills(
         Skill.name,
         Skill.category
     )
-    employee_skills = db.execute(statement).scalars().all()
+    employee_skills = db.execute(statement).all()
 
-    return employee_skills
+    return [
+        {
+            "id": skill.id,
+            "name": skill.name,
+            "category": skill.category,
+            "level": skill.level
+        }
+        for skill in employee_skills
+    ]
 
 
-@app.post("/employees/{id}/skills/{skill_id}", response_class=JSONResponse, status_code=201)
+@app.post("/employees/{employee_id}/skills/{skill_id}", response_class=JSONResponse, status_code=201)
 def add_employee_skill(
-    id: int,
+    employee_id: int,
     skill_id: int,
     level:  int = Body(embed=True),
     db: Session = Depends(get_db)
 ):
-    '''Add skill with proficiency level for employee by employee id and skill id'''
+    '''Добавление навыка сотрудника.
+    Принимает параметры:
+        -employee_id целочисленного типа.
+        -skill_id целочисленного типа.
+        -level целочисленного типа (допустимый диапазон [0; 5]).
+    Возвращает:
+        -созданный объект навыка сотрудника, при успехе (код 201).
+        -ошибку 400 при неверном типе параметра.
+        -ошибку 404 если указанные сотрудник либо навык не найдены.
+        -ошибку 409 если сотрудник уже имеет указанный навык.
+        -ошибку 422 при неверном диапазоне параметра уровня владения.'''
     
     if not isinstance(level, int):
         raise HTTPException(
@@ -340,7 +419,7 @@ def add_employee_skill(
             detail="level must be between 0 and 5 (inclusive)"
         )
 
-    statement = select(Employee).where(Employee.id == id)
+    statement = select(Employee).where(Employee.id == employee_id)
     employee = db.execute(statement).scalar_one_or_none()
     if not employee:
         raise HTTPException(
@@ -348,7 +427,7 @@ def add_employee_skill(
             detail="Employee not found"
         )
 
-    statement = select(Skill).where(Skill.id == id)
+    statement = select(Skill).where(Skill.id == skill_id)
     skill = db.execute(statement).scalar_one_or_none()
     if not skill:
         raise HTTPException(
@@ -358,7 +437,7 @@ def add_employee_skill(
 
     statement = select(EmployeeSkill).where(
         and_(
-            EmployeeSkill.employee_id == id,
+            EmployeeSkill.employee_id == employee_id,
             EmployeeSkill.skill_id == skill_id
         )
     )
@@ -370,7 +449,7 @@ def add_employee_skill(
         )
 
     employee_skill = EmployeeSkill(
-        employee_id = id,
+        employee_id = employee_id,
         skill_id = skill_id,
         level = level
     )
@@ -380,14 +459,23 @@ def add_employee_skill(
     return employee_skill
 
 
-@app.patch("/employees/{id}/skills/{skill_id}")
+@app.patch("/employees/{employee_id}/skills/{skill_id}")
 def update_employee_skill(
-    id: int,
+    employee_id: int,
     skill_id: int,
     level:  int = Body(embed=True),
     db: Session = Depends(get_db)
 ):
-    '''Update skill proficiency level for employee by employee id and skill id'''
+    '''Обновления уровня владения навыка сотрудника.
+    Принимает параметры:
+        -employee_id целочисленного типа.
+        -skill_id целочисленного типа.
+        -level целочисленного типа (допустимый диапазон [0; 5]).
+    Возвращает:
+        -обновленный объект навыка сотрудника, при успехе (код 200).
+        -ошибку 400 при неверном типе параметра.
+        -ошибку 404 если указанные сотрудник либо навык не найдены.
+        -ошибку 422 при неверном диапазоне параметра уровня владения.'''
     
     if not isinstance(level, int):
         raise HTTPException(
@@ -402,7 +490,7 @@ def update_employee_skill(
 
     statement = select(EmployeeSkill).where(
         and_(
-            EmployeeSkill.employee_id == id,
+            EmployeeSkill.employee_id == employee_id,
             EmployeeSkill.skill_id == skill_id
         )
     )
