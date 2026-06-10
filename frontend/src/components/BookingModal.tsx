@@ -26,8 +26,8 @@ interface BookingModalProps {
 /** Форма создания новой брони. */
 export function BookingModal({ employees, date, init, onClose, onSubmit }: BookingModalProps) {
   const [topic, setTopic] = useState("");
-  // По умолчанию выбран первый сотрудник из справочника.
-  const [empId, setEmpId] = useState<number>(employees[0].id);
+  // По умолчанию выбран первый сотрудник из справочника (0, если список пуст).
+  const [empId, setEmpId] = useState<number>(employees[0]?.id ?? 0);
   const [start, setStart] = useState(fmt(init.startH, init.startM));
   const [end, setEnd] = useState(fmt(init.endH, init.endM));
   // Текст ошибки клиентской валидации.

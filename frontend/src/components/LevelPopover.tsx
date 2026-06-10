@@ -14,8 +14,8 @@ interface LevelPopoverProps {
   skill: Skill;
   /** Текущий уровень владения (0..5). */
   value: number;
-  /** Вызывается при перемещении ползунка (живой предпросмотр уровня). */
-  onChange: (value: number) => void;
+  /** Необязательный колбэк живого предпросмотра при перемещении ползунка. */
+  onChange?: (value: number) => void;
   /** Закрытие поповера; передаётся итоговый («подтверждённый») уровень. */
   onClose: (committed: number) => void;
 }
@@ -40,7 +40,7 @@ export function LevelPopover({ emp, skill, value, onChange, onClose }: LevelPopo
         onChange={(e) => {
           const nv = +e.target.value;
           setV(nv);
-          onChange(nv); // сразу обновляем уровень в матрице
+          onChange?.(nv); // живой предпросмотр, если задан
         }}
       />
       <div className="pv-row">

@@ -1,5 +1,8 @@
+import os
+
 from fastapi import FastAPI, Depends, HTTPException, Body
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
 from datetime import datetime
@@ -8,6 +11,20 @@ from models import Employee, Skill, EmployeeSkill, skill_categories
 from dependencies import get_db
 
 app = FastAPI()
+
+# Разрешаем запросы фронтенда (dev-сервер Vite). Список источников можно
+# переопределить переменной окружения CORS_ORIGINS (значения через запятую).
+cors_origins = os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173"
+).split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in cors_origins if o.strip()],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/employees", response_class=JSONResponse)
