@@ -33,7 +33,7 @@ def upgrade() -> None:
     op.create_index('idx_employee_name', 'employees', ['last_name', 'first_name'], unique=False)
     op.create_table('skills',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('name', sa.String(), nullable=False),
+    sa.Column('name', sa.String(length=150), nullable=False),
     sa.Column('category', postgresql.ENUM('language', 'database', 'framework', 'library', 'tool', 'other', name='skill_category'), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')

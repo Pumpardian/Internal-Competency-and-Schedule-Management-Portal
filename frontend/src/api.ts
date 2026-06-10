@@ -7,7 +7,7 @@
 import type { Employee, Skill } from "./types";
 
 /** Базовый адрес API; задаётся через VITE_API_BASE, иначе локальный бэкенд. */
-const API_BASE = (import.meta.env.VITE_API_BASE ?? "http://localhost:8000").replace(/\/+$/, "");
+const API_BASE = (import.meta.env.VITE_API_BASE ?? "http://localhost:8000/api").replace(/\/+$/, "");
 
 /** Сотрудник в формате бэкенда (фамилия и имя раздельно). */
 interface ApiEmployee {

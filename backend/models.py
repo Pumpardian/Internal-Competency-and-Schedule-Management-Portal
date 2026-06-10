@@ -1,8 +1,8 @@
 from sqlalchemy.sql import func
 from sqlalchemy.orm import DeclarativeBase, validates
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Index \
-, CheckConstraint, UniqueConstraint, SmallInteger
-from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy import Column, Integer, String, ForeignKey, Index \
+, CheckConstraint, UniqueConstraint, SmallInteger, TIMESTAMP
+from sqlalchemy.dialects.postgresql import ENUM, TSTZRANGE, ExcludeConstraint
 
 #Модели
 class Base(DeclarativeBase): pass
@@ -15,7 +15,7 @@ class Employee(Base):
     last_name = Column(String(100), nullable=False)
     position = Column(String(150), nullable=True)
     photo_url = Column(String(500), nullable=True)
-    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
 
     __table_args__ = (
         Index("idx_employee_name", "last_name", "first_name"),
@@ -41,7 +41,7 @@ class Skill(Base):
     __tablename__ = "skills"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, unique=True, nullable=False)
+    name = Column(String(150), unique=True, nullable=False)
     category = Column(enum_skill_category, nullable=False)
 
     @validates('category')
@@ -77,4 +77,29 @@ class EmployeeSkill(Base):
         UniqueConstraint("employee_id", "skill_id", name="unique_employee_skill"),
         Index("idx_employee_skill_employee", "employee_id"),
         Index("idx_employee_skill_skill", "skill_id"),
+    )
+
+
+class Booking(Base):
+    __tablename__ = "Bookings"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id = Column(
+        Integer,
+        ForeignKey("employees.id", ondelete='CASCADE', onupdate='CASCADE'),
+        nullable=False
+    )
+    topic = Column(String(255), nullable=False)
+    start_time = Column(TIMESTAMP(timezone=True), nullable=False)
+    end_time = Column(TIMESTAMP(timezone=True), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("end_time > start_time", name="check_time_flow"),
+        ExcludeConstraint(
+            (func.tstzrange(start_time, end_time), "&&"),
+            using="gist",
+            name="exclude_overlapping_bookings"
+        ),
+        Index("idx_booking_start_time", "start_time"),
+        Index("idx_booking_employee_id", "employee_id"),
     )
