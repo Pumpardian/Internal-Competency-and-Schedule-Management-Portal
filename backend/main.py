@@ -195,10 +195,10 @@ def update_employee(
             detail=f"Employee with name {last_name} {first_name} already exists"
         )
 
-    employee.first_name = first_name.strip() if first_name is not None else employee.first_name,
-    employee.last_name = last_name.strip() if last_name is not None else employee.last_name,
-    employee.position = position.strip() if position is not None else employee.position,
-    employee.photo_url = photo_url.strip() if photo_url is not None else employee.photo_url,
+    employee.first_name = first_name.strip() if first_name is not None else employee.first_name
+    employee.last_name = last_name.strip() if last_name is not None else employee.last_name
+    employee.position = position.strip() if position is not None else employee.position
+    employee.photo_url = photo_url.strip() if photo_url is not None else employee.photo_url
 
     db.commit()
     db.refresh(employee)
@@ -482,7 +482,7 @@ def update_employee_skill(
             status_code=400,
             detail="level must be an integer"
         )
-    if level not in range(1, 6):
+    if level not in range(0, 6):
         raise HTTPException(
             status_code=422,
             detail="level must be between 0 and 5 (inclusive)"
