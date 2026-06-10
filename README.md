@@ -9,7 +9,7 @@
 
 ```
 backend/      — FastAPI + SQLAlchemy + Alembic (PostgreSQL)
-frontend/     — TypeScript + React + Vite (бывший mockup)
+frontend/     — TypeScript + React + Vite (в макете был mockup)
 diagrams/     — ER-диаграмма БД
 docker-compose.yaml — PostgreSQL для разработки
 ```
@@ -23,13 +23,11 @@ docker-compose.yaml — PostgreSQL для разработки
 
 ## Запуск
 
-### 1. База данных
+Порядок важен: **БД → миграции → бэкенд → фронтенд**. Команды ниже для PowerShell.
 
-```bash
-docker compose up -d        # поднимает PostgreSQL (нужен файл .env, см. ниже)
-```
+### 1. База данных (Docker)
 
-`.env` рядом с `docker-compose.yaml` (значения подставьте свои):
+Создайте `.env` рядом с `docker-compose.yaml`:
 
 ```
 POSTGRES_USER=portal
@@ -37,32 +35,57 @@ POSTGRES_PASSWORD=portal
 POSTGRES_DB=portal
 ```
 
+```powershell
+docker compose up -d        # PostgreSQL на хост-порту 5433 (внутри 5432)
+docker ps                   # контейнер postgres-database должен быть Up
+```
+
+> **Порт 5433, а не 5432.** Если на уже установлен системный PostgreSQL,
+> он обычно занимает 5432 и перехватывает подключения с того же порта. Чтобы не конфликтовать, контейнер на `5433:5432`.
+
 ### 2. Бэкенд
 
-```bash
+```powershell
 cd backend
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1         
 pip install -r requirements.txt
-cp .env.example .env        # пропишите DATABASE_URL (см. пример)
-alembic upgrade head        # применить миграции
-uvicorn main:app --reload   # http://localhost:8000, Swagger UI: /docs
+Copy-Item .env.example .env           # затем впишите порт 5433 
+alembic upgrade head                  # применить миграции
+uvicorn main:app --reload             # http://127.0.0.1:8000, Swagger: /docs
+```
+
+`backend/.env`:
+
+```
+DATABASE_URL=postgresql+psycopg2://portal:portal@localhost:5433/portal
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
 ### 3. Фронтенд
 
-```bash
+```powershell
 cd frontend
 npm install
-cp .env.example .env        # при необходимости поменяйте VITE_API_BASE
 npm run dev                 # http://localhost:5173
 ```
 
-CORS на бэкенде по умолчанию разрешает dev-сервер Vite (`localhost:5173`);
-изменить можно переменной `CORS_ORIGINS`.
+> **Запускайте `npm run dev` именно из папки `frontend`** — иначе корень Vite
+> укажет в другой каталог, и сервер будет отдавать 404 на все файлы.
 
-## Ветки
+`frontend/.env` (адрес бэкенда):
 
-- `main` — основная ветка.
-- `alpha` — интеграция бэкенда и клиента (матрица компетенций по API).
-- `first_week` — задание первой недели (диаграммы и макет).
-- `backend_competency` — разработка серверной части.
+```
+VITE_API_BASE=http://127.0.0.1:8000
+```
+
+### Демо-данные (необязательно)
+
+Наполнить БД примерами сотрудников, навыков и уровней (бэк должен быть
+запущен):
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe seed_demo.py
+```
+
