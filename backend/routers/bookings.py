@@ -3,20 +3,65 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
 from datetime import datetime, date, timedelta
+from pydantic import BaseModel, Field, field_validator
+from typing import List
 
 from models import Booking
 from dependencies import get_db
 
 router = APIRouter()
 
-@router.get("/bookings", response_class=JSONResponse)
+#Модели
+class BookingCreate(BaseModel):
+    """Модель для создания бронирования"""
+    employee_id: int = Field(..., gt=0, description="Уникальный идентификатор сотрудника", examples=[123])
+    topic: str = Field(..., min_length=1, max_length=255, description="Тема бронирования", examples=["Совещание по проекту"])
+    start_time: datetime = Field(..., description="Время начала", examples=["2024-01-15T10:00:00"])
+    end_time: datetime = Field(..., description="Время окончания", examples=["2024-01-15T11:00:00"])
+    
+    @field_validator('end_time')
+    @classmethod
+    def validate_end_time(cls, v: datetime, info) -> datetime:
+        """Валидация: время окончания должно быть позже времени начала"""
+        start_time = info.data.get('start_time')
+        if start_time and v <= start_time:
+            raise ValueError('Время окончания должно быть позже времени начала')
+        return v
+
+class BookingResponse(BaseModel):
+    """Модель ответа с данными бронирования"""
+    id: int = Field(..., description="Уникальный идентификатор брони", examples=[1])
+    employee_id: int = Field(..., description="Уникальный идентификатор сотрудника", examples=[123])
+    topic: str = Field(..., description="Тема бронирования", examples=["Совещание по проекту"])
+    start_time: datetime = Field(..., description="Время начала", examples=["2024-01-15T10:00:00"])
+    end_time: datetime = Field(..., description="Время окончания", examples=["2024-01-15T11:00:00"])
+    
+    class Config:
+        from_attributes = True
+
+class DeleteResponse(BaseModel):
+    """Модель ответа при удалении"""
+    message: str = Field(..., description="Сообщение об операции", examples=["Бронь успешно удалена"])
+
+#Эндпоинты
+@router.get(
+    "/bookings", 
+    response_class=JSONResponse,
+    response_model=List[BookingResponse],
+    summary="Получить список броней",
+)
 def get_bookings(
-    book_date: date = Query(default=date.today(), examples=["2026-06-10"]),
-    db:     Session = Depends(get_db)
+    book_date: date = Query(
+        default=date.today(), 
+        description="Дата в формате YYYY-MM-DD",
+        examples=["2026-06-10"]
+    ),
+    db: Session = Depends(get_db)
 ):
     '''
     Получение списка броней за указанный день.
-        
+    
+    Параметры запроса:
     - **book_date**: Дата в формате YYYY-MM-DD (опционально, по умолчанию текущая дата).
 
     Возвращает список броней на указанную дату.    
@@ -27,39 +72,36 @@ def get_bookings(
         Booking.start_time < book_date + timedelta(days=1)
     )
     bookings = db.execute(statement).scalars().all()
-
     return bookings
 
 
-@router.post("/bookings", response_class=JSONResponse, status_code=201)
+@router.post(
+    "/bookings", 
+    response_class=JSONResponse, 
+    status_code=201,
+    response_model=BookingResponse,
+    summary="Создать бронирование",
+)
 def create_booking(
-    employee_id:     int = Body(embed=True, gt=0, examples=[123]),
-    topic:           str = Body(embed=True, min_length=1, max_length=255, examples=["Совещание по проекту"]),
-    start_time: datetime = Body(embed=True, examples=["2024-01-15T10:00:00"]),
-    end_time:   datetime = Body(embed=True, examples=["2024-01-15T11:00:00"]),
-    db:          Session = Depends(get_db)
+    booking_data: BookingCreate,
+    db: Session = Depends(get_db)
 ):
     '''
     Создание нового бронирования на указанный период времени.
     
-    - **employee_id**: Уникальный идентификатор сотрудника, целочисленного типа (обязательно).
-    - **topic**: Тема бронирования, строкового типа (обязательно, максимальная длина: 255).
-    - **start_time**: Время начала, временного формата (обязательно).
-    - **end_time**: Время окончания, временного формата (обязательно).
+    Тело запроса:
+    - **employee_id**: Уникальный идентификатор сотрудника, целочисленного типа (обязательно, >0).
+    - **topic**: Тема бронирования, строкового типа (обязательно, 1-255 символов).
+    - **start_time**: Время начала, datetime (обязательно).
+    - **end_time**: Время окончания, datetime (обязательно, должно быть позже start_time).
     
-    Возвращает созданную бронь.
+    Возвращает созданную бронь с присвоенным уникальным идентификатором.
     '''
-    
-    if start_time > end_time:
-        raise HTTPException(
-            status_code=400,
-            detail="Время окончания должно быть позже времени начала"
-        )
     
     statement = select(Booking).where(
         and_(
-            Booking.start_time < end_time,
-            Booking.end_time > start_time
+            Booking.start_time < booking_data.end_time,
+            Booking.end_time > booking_data.start_time
         )
     )
     overlapping = db.execute(statement).scalar_one_or_none()
@@ -70,10 +112,10 @@ def create_booking(
         )
     
     booking = Booking(
-        employee_id = employee_id,
-        topic = topic,
-        start_time = start_time,
-        end_time = end_time
+        employee_id=booking_data.employee_id,
+        topic=booking_data.topic,
+        start_time=booking_data.start_time,
+        end_time=booking_data.end_time
     )
     db.add(booking)
     db.commit()
@@ -81,14 +123,20 @@ def create_booking(
     return booking
 
 
-@router.delete("/bookings/{id}", response_class=JSONResponse)
+@router.delete(
+    "/bookings/{id}", 
+    response_class=JSONResponse,
+    response_model=DeleteResponse,
+    summary="Удалить бронирование",
+)
 def delete_booking(
-    id:     int = Path(..., description="Уникальный идентификатор брони", ge=1, examples=[1]),
+    id: int = Path(..., description="Уникальный идентификатор брони", ge=1, examples=[1]),
     db: Session = Depends(get_db)
 ):
     '''
     Удаляет бронь с указанным уникальным идентификатором.
     
+    Путь запроса:
     - **id**: Уникальный идентификатор брони, целочисленного типа.
     
     Возвращает сообщение об успешном удалении брони.
