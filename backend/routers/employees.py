@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Body, Path
+from fastapi import APIRouter, Depends, HTTPException, Body, Path, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
+from math import ceil
 
 from models import Employee
 from dependencies import get_db
@@ -54,25 +55,59 @@ class DeleteResponse(BaseModel):
     """Модель ответа при удалении"""
     message: str = Field(..., description="Сообщение об операции", examples=["Сотрудник успешно удален"])
 
+class PagenatedEmployeeResponse(BaseModel):
+    """Страничная модель ответа с данными сотрудников"""
+    page_size: int = Field(..., description="Размер страницы", examples=[2])
+    current_page: int = Field(..., description="Номер текущей страницы", examples=[1])
+    total_pages: int = Field(..., description="Общее количество страниц", examples=[5])
+    data: List[EmployeeResponse] = Field(..., description="Сотрудники данной строницы",
+        examples=[[EmployeeResponse(id=1, first_name="Иван", last_name="Иванов",
+                                    position="Менеджер проекта", photo_url="https://example.com/photo.jpg",
+                                    created_at="2026-06-11T15:00:00"),
+                   EmployeeResponse(id=2, first_name="Петр", last_name="Петров",
+                                    position="Тестировщиц", photo_url="https://example.com/photo2.jpg",
+                                    created_at="2026-06-11T16:00:00")]]
+    )
+
 #Эндпоинты
 @router.get(
     "/employees", 
     response_class=JSONResponse,
-    response_model=List[EmployeeResponse],
+    response_model=PagenatedEmployeeResponse,
     summary="Получить список всех сотрудников",
+    responses={
+        200: {"description": "Страница из списка сотрудников", "model": PagenatedEmployeeResponse},
+        400: {"description": "Неверные данные"},
+    }
 )
 def get_employees(
+    current_page: int = Query(default=1, description="Номер текущей страницы", examples=[2], ge=1),
+    page_size: int = Query(default=10, description="Размер страницы (1-20)", examples=[10], ge=1, le=20),
     db: Session = Depends(get_db)
 ):
     '''
-    Получение списка всех сотрудников.
+    Получение списка сотрудников (постранично).
+
+    Параметры запроса (опционально)
+    - **current_page**: Номер текущей страницы **[int]**.
+    - **page_size**: Размер страницы (1-20) **[int]**.
     
     Возвращает список сотрудников.
     '''
 
-    statement = select(Employee)
+    total_count = db.scalar(select(func.count(Employee.id)))
+    total_pages = ceil(total_count / page_size) if total_count > 0 else 1
+    offset = (current_page - 1) * page_size
+
+    statement = select(Employee).offset(offset).limit(page_size)
     employees = db.execute(statement).scalars().all()
-    return employees
+    page = PagenatedEmployeeResponse(
+        current_page=current_page,
+        page_size=page_size,
+        total_pages=total_pages,
+        data=employees
+    )
+    return page
 
 
 @router.get(
@@ -80,16 +115,20 @@ def get_employees(
     response_class=JSONResponse,
     response_model=EmployeeResponse,
     summary="Получить сотрудника по уникальному идентификатору",
+    responses={
+        200: {"description": "Сотрудник найден", "model": EmployeeResponse},
+        404: {"description": "Сотрудник не найден"},
+    }
 )
 def get_employee(
     id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
     db: Session = Depends(get_db)
 ):
     '''
-    Получение сотрудника по его уникальному идентификатору.
+    Возвращает детальную информацию о конкретном сотруднике.
 
     Путь запроса:
-    - **id**: Уникальный идентификатор сотрудника, целочисленного типа.
+    - **id**: Уникальный идентификатор сотрудника **[int]**.
     
     Возвращает указанного сотрудника.
     '''
@@ -110,6 +149,11 @@ def get_employee(
     status_code=201,
     response_model=EmployeeResponse,
     summary="Добавить нового сотрудника",
+    responses={
+        201: {"description": "Сотрудник создан", "model": EmployeeResponse},
+        400: {"description": "Неверные данные"},
+        409: {"description": "Сотрудник уже существует"},
+    }
 )
 def add_employee(
     employee_data: EmployeeCreate,
@@ -119,10 +163,10 @@ def add_employee(
     Добавление нового сотрудника.
     
     Тело запроса:
-    - **first_name**: Имя сотрудника (обязательно, 1-100 символов).
-    - **last_name**: Фамилия сотрудника (обязательно, 1-100 символов).
-    - **position**: Должность (опционально, до 150 символов).
-    - **photo_url**: Ссылка на фото (опционально, до 500 символов).
+    - **first_name**: Имя сотрудника, **[string]** (обязательно, 1-100 символов).
+    - **last_name**: Фамилия сотрудника **[string]** (обязательно, 1-100 символов).
+    - **position**: Должность **[string]** (опционально, до 150 символов).
+    - **photo_url**: Ссылка на фото **[string]** (опционально, до 500 символов).
     
     Возвращает созданного сотрудника с присвоенным уникальным идентификатором.
     '''
@@ -158,6 +202,12 @@ def add_employee(
     response_class=JSONResponse,
     response_model=EmployeeResponse,
     summary="Обновить данные сотрудника",
+    responses={
+        200: {"description": "Сотрудник обновлен", "model": EmployeeResponse},
+        400: {"description": "Неверные данные"},
+        404: {"description": "Сотрудник не найден"},
+        409: {"description": "Сотрудник уже существует"},
+    }
 )
 def update_employee(
     id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
@@ -168,13 +218,13 @@ def update_employee(
     Обновляет данные сотрудника.
     
     Путь запроса:
-    - **id**: Уникальный идентификатор сотрудника, целочисленного типа.
+    - **id**: Уникальный идентификатор сотрудника **[int]**.
     
     Тело запроса (все поля опциональны):
-    - **first_name**: Имя сотрудника (1-100 символов).
-    - **last_name**: Фамилия сотрудника (1-100 символов).
-    - **position**: Должность (до 150 символов).
-    - **photo_url**: Ссылка на фото (до 500 символов).
+    - **first_name**: Имя сотрудника **[string]** (1-100 символов).
+    - **last_name**: Фамилия сотрудника **[string]** (1-100 символов).
+    - **position**: Должность **[string]** (до 150 символов).
+    - **photo_url**: Ссылка на фото **[string]** (до 500 символов).
     
     Возвращает сотрудника с обновленными данными.
     '''
@@ -224,16 +274,20 @@ def update_employee(
     response_class=JSONResponse,
     response_model=DeleteResponse,
     summary="Удалить сотрудника",
+    responses={
+        200: {"description": "Сотрудник удален", "model": DeleteResponse},
+        404: {"description": "Сотрудник не найден"},
+    }
 )
 def delete_employee(
     id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
     db: Session = Depends(get_db)
 ):
     '''
-    Удаляет сотрудника с указанным уникальным идентификатором.
+    Удаляет указанного сотрудника.
     
     Путь запроса:
-    - **id**: Уникальный идентификатор сотрудника, целочисленного типа.
+    - **id**: Уникальный идентификатор сотрудника **[int]**.
     
     Возвращает сообщение об успешном удалении сотрудника.
     '''

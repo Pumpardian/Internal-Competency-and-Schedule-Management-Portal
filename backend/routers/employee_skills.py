@@ -34,22 +34,30 @@ class EmployeeSkillDetailResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class DeleteResponse(BaseModel):
+    """Модель ответа при удалении"""
+    message: str = Field(..., description="Сообщение об операции", examples=["Навык (ID: {skill_id}) успешно удален у сотрудника (ID: {employee_id})"])
+
 #Эндпоинты
 @router.get(
     "/employees/{id}/skills", 
     response_class=JSONResponse,
     response_model=List[EmployeeSkillResponse],
     summary="Получить навыки сотрудника",
+    responses={
+        200: {"description": "Навыки сотрудника", "model": List[EmployeeSkillResponse]},
+        404: {"description": "Сотрудник не найден"},
+    }
 )
 def get_employee_skills(
     id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
     db: Session = Depends(get_db)
 ):
     '''
-    Получение навыков сотрудника по его уникальному идентификатору.
+    Получение навыков указанного сотрудника.
     
     Путь запроса:
-    - **id**: Уникальный идентификатор сотрудника, целочисленного типа.
+    - **id**: Уникальный идентификатор сотрудника **[int]**.
     
     Возвращает список навыков сотрудника.
     '''
@@ -93,6 +101,11 @@ def get_employee_skills(
     status_code=201,
     response_model=EmployeeSkillDetailResponse,
     summary="Добавить навык сотруднику",
+    responses={
+        201: {"description": "Навык сотрудника создан", "model": EmployeeSkillResponse},
+        400: {"description": "Неверные данные"},
+        409: {"description": "Навык сотрудника уже существует"},
+    }
 )
 def add_employee_skill(
     employee_id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
@@ -101,16 +114,16 @@ def add_employee_skill(
     db: Session = Depends(get_db)
 ):
     '''
-    Добавление навыка сотруднику.
+    Добавление навыка указанному сотруднику.
     
     Параметры пути:
-    - **employee_id**: Уникальный идентификатор сотрудника, целочисленного типа (обязательно).
-    - **skill_id**: Уникальный идентификатор навыка, целочисленного типа (обязательно).
+    - **employee_id**: Уникальный идентификатор сотрудника **[int]** (обязательно).
+    - **skill_id**: Уникальный идентификатор навыка **[int]** (обязательно).
     
     Тело запроса:
-    - **level**: Уровень владения, целочисленного типа (допустимый диапазон [0; 5]).
+    - **level**: Уровень владения **[int]** (допустимый диапазон [0; 5]).
     
-    Возвращает связную информацию созданного навыка сотрудника.
+    Возвращает связную информацию для созданного навыка сотрудника.
     '''
     
     statement = select(Employee).where(Employee.id == employee_id)
@@ -158,6 +171,11 @@ def add_employee_skill(
     response_class=JSONResponse,
     response_model=EmployeeSkillDetailResponse,
     summary="Обновить уровень навыка сотрудника",
+    responses={
+        200: {"description": "Навык сотрудника обновлен", "model": EmployeeSkillResponse},
+        400: {"description": "Неверные данные"},
+        409: {"description": "Навык сотрудника уже существует"},
+    }
 )
 def update_employee_skill(
     employee_id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
@@ -169,13 +187,13 @@ def update_employee_skill(
     Обновление уровня владения навыком сотрудника.
     
     Параметры пути:
-    - **employee_id**: Уникальный идентификатор сотрудника, целочисленного типа (обязательно).
-    - **skill_id**: Уникальный идентификатор навыка, целочисленного типа (обязательно).
+    - **employee_id**: Уникальный идентификатор сотрудника **[int]** (обязательно).
+    - **skill_id**: Уникальный идентификатор навыка **[int]** (обязательно).
     
     Тело запроса:
-    - **level**: Новый уровень владения, целочисленного типа (допустимый диапазон [0; 5]).
+    - **level**: Новый уровень владения **[int]** (допустимый диапазон [0; 5]).
     
-    Возвращает связную информацию обновленного навыка сотрудника.
+    Возвращает связную информацию для обновленного навыка сотрудника.
     '''
     
     statement = select(EmployeeSkill).where(
@@ -203,6 +221,10 @@ def update_employee_skill(
     status_code=200,
     response_model=dict,
     summary="Удалить навык у сотрудника",
+    responses={
+        200: {"description": "Сотрудник удален", "model": DeleteResponse    },
+        404: {"description": "Сотрудник не найден"},
+    }
 )
 def delete_employee_skill(
     employee_id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
