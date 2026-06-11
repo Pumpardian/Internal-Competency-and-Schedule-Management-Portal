@@ -49,6 +49,9 @@ class DeleteResponse(BaseModel):
     response_class=JSONResponse,
     response_model=List[BookingResponse],
     summary="Получить список броней",
+    responses={
+        200: {"description": "Список брони", "model": List[BookingResponse]},
+    }
 )
 def get_bookings(
     book_date: date = Query(
@@ -62,7 +65,7 @@ def get_bookings(
     Получение списка броней за указанный день.
     
     Параметры запроса:
-    - **book_date**: Дата в формате YYYY-MM-DD (опционально, по умолчанию текущая дата).
+    - **book_date**: Дата в формате YYYY-MM-DD **[date]** (опционально, по умолчанию текущая дата).
 
     Возвращает список броней на указанную дату.    
     '''
@@ -80,20 +83,26 @@ def get_bookings(
     response_class=JSONResponse, 
     status_code=201,
     response_model=BookingResponse,
-    summary="Создать бронирование",
+    summary="Создать бронь",
+    responses={
+        201: {"description": "Бронь создана", "model": BookingResponse},
+        400: {"description": "Неверные данные"},
+        409: {"description": "Бронь пересекается с существующей"},
+        422: {"description": "Неверный формат данных"}
+    }
 )
 def create_booking(
     booking_data: BookingCreate,
     db: Session = Depends(get_db)
 ):
     '''
-    Создание нового бронирования на указанный период времени.
+    Создание новой брони на указанный период времени.
     
     Тело запроса:
-    - **employee_id**: Уникальный идентификатор сотрудника, целочисленного типа (обязательно, >0).
-    - **topic**: Тема бронирования, строкового типа (обязательно, 1-255 символов).
-    - **start_time**: Время начала, datetime (обязательно).
-    - **end_time**: Время окончания, datetime (обязательно, должно быть позже start_time).
+    - **employee_id**: Уникальный идентификатор сотрудника **[int]** (обязательно, >0).
+    - **topic**: Тема бронирования, строкового типа **[string]** (обязательно, 1-255 символов).
+    - **start_time**: Время начала в формате YYYY-MM-DDThh:mm:ss **[datetime]** (обязательно).
+    - **end_time**: Время окончания в формате YYYY-MM-DDThh:mm:ss **[datetime]** (обязательно, должно быть позже start_time).
     
     Возвращает созданную бронь с присвоенным уникальным идентификатором.
     '''
@@ -128,16 +137,21 @@ def create_booking(
     response_class=JSONResponse,
     response_model=DeleteResponse,
     summary="Удалить бронирование",
+    responses={
+        200: {"description": "Бронь удалена", "model": DeleteResponse},
+        404: {"description": "Бронь не найдена"},
+        422: {"description": "Неверный формат уникального идентификатора"}
+    }
 )
 def delete_booking(
     id: int = Path(..., description="Уникальный идентификатор брони", ge=1, examples=[1]),
     db: Session = Depends(get_db)
 ):
     '''
-    Удаляет бронь с указанным уникальным идентификатором.
+    Удаляет указанную бронь.
     
     Путь запроса:
-    - **id**: Уникальный идентификатор брони, целочисленного типа.
+    - **id**: Уникальный идентификатор брони **[int]**.
     
     Возвращает сообщение об успешном удалении брони.
     '''
