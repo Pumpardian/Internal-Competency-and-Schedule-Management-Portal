@@ -4,6 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import Config
 
 app = FastAPI()
+
+# Разрешаем запросы фронтенда (dev-сервер Vite). Список источников берётся из
+# переменной окружения CORS_ORIGINS (значения через запятую, см. config.py).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in Config.CORS_ORIGINS if o.strip()],

@@ -5,9 +5,14 @@
  * пробрасывает ошибки (с текстом из поля detail) для показа в уведомлениях.
  */
 import type { Employee, Skill } from "./types";
+import axios from "axios";
 
-/** Базовый адрес API; задаётся через VITE_API_BASE, иначе локальный бэкенд. */
-const API_BASE = (import.meta.env.VITE_API_BASE ?? "http://localhost:8000/api").replace(/\/+$/, "");
+/** Экземпляр axios: базовый адрес API + общие заголовки. Адрес задаётся через
+ *  VITE_API_BASE, иначе — локальный бэкенд (роуты отдаются под префиксом /api). */
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE ?? "http://localhost:8000/api",
+  headers: { "Content-Type": "application/json" },
+});
 
 /** Сотрудник в формате бэкенда (фамилия и имя раздельно). */
 interface ApiEmployee {
@@ -27,24 +32,15 @@ export interface ApiEmployeeSkill {
   level: number;
 }
 
-/** Обёртка над fetch: добавляет заголовки и разворачивает ошибки сервера. */
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(API_BASE + path, {
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-    ...init,
-  });
-  if (!res.ok) {
-    let detail = `${res.status} ${res.statusText}`;
-    try {
-      const body = await res.json();
-      if (body && body.detail) detail = String(body.detail);
-    } catch {
-      // тело ответа без JSON — оставляем статус как есть
-    }
-    throw new Error(detail);
-  }
-  return (await res.json()) as T;
-}
+/** Переводим ошибки axios в обычные Error с текстом из поля detail сервера. */
+api.interceptors.response.use(
+  (res) => res, // успешный ответ пропускаем как есть
+  (err) => {
+    const detail = err.response?.data?.detail;
+    const status = err.response ? `${err.response.status} ${err.response.statusText}` : err.message;
+    throw new Error(detail ? String(detail) : status);
+  },
+);
 
 /** Приводит сотрудника бэкенда к виду, удобному интерфейсу. */
 function toEmployee(e: ApiEmployee): Employee {
@@ -54,52 +50,42 @@ function toEmployee(e: ApiEmployee): Employee {
 
 /** GET /employees — список сотрудников. */
 export async function fetchEmployees(): Promise<Employee[]> {
-  const data = await request<ApiEmployee[]>("/employees");
+  const { data } = await api.get<ApiEmployee[]>("/employees");
   return data.map(toEmployee);
 }
 
 /** GET /skills — список навыков. */
-export function fetchSkills(): Promise<Skill[]> {
-  return request<Skill[]>("/skills");
+export async function fetchSkills(): Promise<Skill[]> {
+  const { data } = await api.get<Skill[]>("/skills");
+  return data;
 }
 
 /** GET /employees/{id}/skills — навыки сотрудника с уровнями. */
-export function fetchEmployeeSkills(empId: number): Promise<ApiEmployeeSkill[]> {
-  return request<ApiEmployeeSkill[]>(`/employees/${empId}/skills`);
+export async function fetchEmployeeSkills(empId: number): Promise<ApiEmployeeSkill[]> {
+  const { data } = await api.get<ApiEmployeeSkill[]>(`/employees/${empId}/skills`);
+  return data;
 }
 
 /** POST /employees/{empId}/skills/{skillId} — назначить навык с уровнем. */
-export function assignSkill(empId: number, skillId: number, level: number): Promise<unknown> {
-  return request(`/employees/${empId}/skills/${skillId}`, {
-    method: "POST",
-    body: JSON.stringify({ level }),
-  });
+export async function assignSkill(empId: number, skillId: number, level: number): Promise<void> {
+  await api.post(`/employees/${empId}/skills/${skillId}`, { level });
 }
 
 /** PATCH /employees/{empId}/skills/{skillId} — изменить уровень владения. */
-export function patchSkillLevel(empId: number, skillId: number, level: number): Promise<unknown> {
-  return request(`/employees/${empId}/skills/${skillId}`, {
-    method: "PATCH",
-    body: JSON.stringify({ level }),
-  });
+export async function patchSkillLevel(empId: number, skillId: number, level: number): Promise<void> {
+  await api.patch(`/employees/${empId}/skills/${skillId}`, { level });
 }
 
 /** POST /employees — создать сотрудника. */
-export function createEmployee(
+export async function createEmployee(
   first_name: string,
   last_name: string,
   position?: string,
-): Promise<unknown> {
-  return request("/employees", {
-    method: "POST",
-    body: JSON.stringify({ first_name, last_name, position }),
-  });
+): Promise<void> {
+  await api.post("/employees", { first_name, last_name, position });
 }
 
 /** POST /skills — создать навык. */
-export function createSkill(name: string, category: string): Promise<unknown> {
-  return request("/skills", {
-    method: "POST",
-    body: JSON.stringify({ name, category }),
-  });
+export async function createSkill(name: string, category: string): Promise<void> {
+  await api.post("/skills", { name, category });
 }
