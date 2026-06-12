@@ -18,10 +18,22 @@ interface LevelPopoverProps {
   onChange?: (value: number) => void;
   /** Закрытие поповера; передаётся итоговый («подтверждённый») уровень. */
   onClose: (committed: number) => void;
+  /** Навык назначен сотруднику — можно показать кнопку снятия. */
+  canRemove?: boolean;
+  /** Снять навык у сотрудника (DELETE связи); сам закрывает поповер. */
+  onRemove?: () => void;
 }
 
 /** Маленькая всплывающая панель с ползунком уровня и кнопкой подтверждения. */
-export function LevelPopover({ emp, skill, value, onChange, onClose }: LevelPopoverProps) {
+export function LevelPopover({
+  emp,
+  skill,
+  value,
+  onChange,
+  onClose,
+  canRemove,
+  onRemove,
+}: LevelPopoverProps) {
   // Локальное состояние ползунка для отображения значения рядом с ним.
   const [v, setV] = useState(value);
 
@@ -49,6 +61,13 @@ export function LevelPopover({ emp, skill, value, onChange, onClose }: LevelPopo
           Готово
         </button>
       </div>
+      {canRemove && onRemove && (
+        <div className="pv-row" style={{ marginTop: 8 }}>
+          <button className="btn small danger" onClick={onRemove}>
+            Снять навык
+          </button>
+        </div>
+      )}
     </div>
   );
 }

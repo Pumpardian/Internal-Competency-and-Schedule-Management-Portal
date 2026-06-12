@@ -1,9 +1,31 @@
 # -*- coding: utf-8 -*-
-"""Наполнение БД демо-данными через REST API бэкенда."""
+"""Наполнение БД демо-данными через REST API бэкенда.
+
+Создаёт 100 сотрудников и 100 навыков и случайным образом проставляет уровни
+владения — чтобы на фронте было видно постраничную навигацию (пагинацию) и по
+строкам (сотрудники), и по столбцам (навыки).
+"""
 import json
+import random
+import urllib.error
 import urllib.request
 
-BASE = "http://127.0.0.1:8000"
+from sqlalchemy import text
+
+from database import SessionLocal
+
+# Роутеры смонтированы под префиксом /api (см. backend/main.py).
+BASE = "http://127.0.0.1:8000/api"
+
+# Воспроизводимость демо-набора.
+random.seed(42)
+
+# Сколько сотрудников и навыков создать.
+EMPLOYEE_COUNT = 100
+SKILL_COUNT = 100
+
+# Допустимые категории навыков (см. models.skill_categories).
+CATEGORIES = ["language", "database", "framework", "library", "tool", "other"]
 
 
 def post(path, payload):
@@ -16,45 +38,99 @@ def post(path, payload):
         return json.loads(r.read().decode("utf-8"))
 
 
+def reset_tables():
+    """Очищает таблицы перед заливкой, чтобы не ловить 409 на уже существующих
+    записях и получить ровно по 100 сотрудников и навыков."""
+    with SessionLocal() as db:
+        db.execute(text(
+            'TRUNCATE "Bookings", employee_skills, skills, employees RESTART IDENTITY CASCADE'
+        ))
+        db.commit()
+
+
+# --- Генерация сотрудников: уникальные пары «имя + фамилия» ------------------
+FIRST_NAMES = [
+    "Иван", "Анна", "Пётр", "Мария", "Алексей", "Ольга", "Дмитрий", "Елена",
+    "Сергей", "Наталья", "Андрей", "Татьяна", "Михаил", "Екатерина",
+]
+LAST_NAMES = [
+    "Иванов", "Петров", "Сидоров", "Кузнецов", "Смирнов", "Попов", "Соколов",
+    "Лебедев", "Козлов", "Новиков", "Морозов", "Волков", "Соловьёв", "Васильев",
+]
+POSITIONS = [
+    "Backend-разработчик", "Frontend-разработчик", "DevOps-инженер",
+    "Системный аналитик", "Тимлид", "QA-инженер", "Data-инженер",
+    "UX-дизайнер", "Продакт-менеджер", "SRE-инженер",
+]
+
+# Все уникальные пары (имя, фамилия), берём первые EMPLOYEE_COUNT.
+employee_pairs = [(f, l) for l in LAST_NAMES for f in FIRST_NAMES][:EMPLOYEE_COUNT]
 employees = [
-    ("Иван", "Иванов", "Backend-разработчик"),
-    ("Анна", "Петрова", "Frontend-разработчик"),
-    ("Пётр", "Сидоров", "DevOps-инженер"),
-    ("Мария", "Кузнецова", "Системный аналитик"),
-    ("Алексей", "Смирнов", "Тимлид"),
+    (f, l, POSITIONS[i % len(POSITIONS)])
+    for i, (f, l) in enumerate(employee_pairs)
 ]
 
-skills = [
-    ("Python", "language"),
-    ("TypeScript", "language"),
-    ("SQL", "language"),
-    ("PostgreSQL", "database"),
-    ("FastAPI", "framework"),
-    ("React", "library"),
-    ("Docker", "tool"),
-    ("Git", "tool"),
+# --- Генерация навыков: уникальные названия с валидной категорией -----------
+BASE_SKILLS = [
+    ("Python", "language"), ("TypeScript", "language"), ("JavaScript", "language"),
+    ("SQL", "language"), ("Go", "language"), ("Rust", "language"), ("Java", "language"),
+    ("C#", "language"), ("Kotlin", "language"), ("Swift", "language"),
+    ("PostgreSQL", "database"), ("MySQL", "database"), ("MongoDB", "database"),
+    ("Redis", "database"), ("ClickHouse", "database"), ("Elasticsearch", "database"),
+    ("FastAPI", "framework"), ("Django", "framework"), ("Flask", "framework"),
+    ("Spring", "framework"), ("Express", "framework"), ("NestJS", "framework"),
+    ("React", "library"), ("Vue", "library"), ("Angular", "library"),
+    ("Redux", "library"), ("pandas", "library"), ("NumPy", "library"),
+    ("Docker", "tool"), ("Kubernetes", "tool"), ("Git", "tool"), ("Terraform", "tool"),
+    ("Ansible", "tool"), ("Nginx", "tool"), ("Grafana", "tool"), ("Prometheus", "tool"),
+    ("Kafka", "tool"), ("RabbitMQ", "tool"), ("Jenkins", "tool"), ("GitLab CI", "tool"),
 ]
+# Дополняем до SKILL_COUNT синтетическими, но уникальными названиями.
+skills = list(BASE_SKILLS)
+i = 1
+while len(skills) < SKILL_COUNT:
+    skills.append((f"Технология {i}", CATEGORIES[i % len(CATEGORIES)]))
+    i += 1
+skills = skills[:SKILL_COUNT]
 
-# Матрица уровней владения: emp_index -> {skill_index: level} (0..5)
-matrix = {
-    0: {0: 5, 2: 4, 3: 4, 4: 5, 6: 3, 7: 4},          # Иванов — backend
-    1: {1: 5, 5: 5, 2: 2, 7: 4},                       # Петрова — frontend
-    2: {0: 3, 3: 3, 6: 5, 7: 5},                       # Сидоров — devops
-    3: {2: 4, 3: 4, 7: 2},                             # Кузнецова — аналитик
-    4: {0: 4, 1: 4, 4: 4, 5: 4, 6: 4, 7: 5},          # Смирнов — тимлид
-}
+# --- Отправка на сервер -----------------------------------------------------
+reset_tables()
+print("Таблицы очищены.")
 
 emp_ids = [post("/employees", {"first_name": f, "last_name": l, "position": p})["id"]
            for (f, l, p) in employees]
-print("Сотрудники:", emp_ids)
+print(f"Сотрудники: создано {len(emp_ids)}")
 
 skill_ids = [post("/skills", {"name": n, "category": c})["id"] for (n, c) in skills]
-print("Навыки:", skill_ids)
+print(f"Навыки: создано {len(skill_ids)}")
 
+# Каждому сотруднику случайный набор навыков (5–15) со случайным уровнем 1–5.
 count = 0
-for ei, levels in matrix.items():
-    for si, lvl in levels.items():
-        post(f"/employees/{emp_ids[ei]}/skills/{skill_ids[si]}", {"level": lvl})
+for eid in emp_ids:
+    chosen = random.sample(skill_ids, k=random.randint(5, 15))
+    for sid in chosen:
+        post(f"/employees/{eid}/skills/{sid}", {"level": random.randint(1, 5)})
         count += 1
-print("Назначений уровней:", count)
+print(f"Назначений уровней: {count}")
+
+# --- Брони переговорной --------------------------------------------------
+# На дату по умолчанию календаря (RoomPage) и в его рабочий диапазон 9:00–18:00.
+# Время в UTC ("Z"), интервалы не пересекаются (на бэке стоит запрет пересечений).
+BOOK_DATE = "2026-06-08"
+bookings = [
+    (0, "Дейли команды", "09:00", "09:30"),
+    (4, "Ревью архитектуры", "10:00", "11:00"),
+    (2, "Интервью кандидата", "11:30", "12:30"),
+    (3, "Планирование спринта", "13:00", "14:30"),
+    (8, "Синк с продактом", "15:00", "16:00"),
+    (1, "Ретроспектива", "16:30", "17:30"),
+]
+for emp_index, topic, start, end in bookings:
+    post("/bookings", {
+        "employee_id": emp_ids[emp_index],
+        "topic": topic,
+        "start_time": f"{BOOK_DATE}T{start}:00Z",
+        "end_time": f"{BOOK_DATE}T{end}:00Z",
+    })
+print(f"Броней: создано {len(bookings)} на {BOOK_DATE}")
 print("Готово.")

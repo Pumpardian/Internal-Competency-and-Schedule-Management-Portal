@@ -4,7 +4,7 @@
  * Преобразует ответы сервера в типы, которые ожидают компоненты, и единообразно
  * пробрасывает ошибки (с текстом из поля detail) для показа в уведомлениях.
  */
-import type { Employee, Skill } from "./types";
+import type { Booking, BookingDraft, Employee, Skill } from "./types";
 import axios from "axios";
 
 /** Экземпляр axios: базовый адрес API + общие заголовки. Адрес задаётся через
@@ -32,6 +32,26 @@ export interface ApiEmployeeSkill {
   level: number;
 }
 
+/** Страничный ответ бэкенда (формат PagenatedResponse). */
+interface ApiPage<T> {
+  page_size: number;
+  current_page: number;
+  total_pages: number;
+  data: T[];
+}
+
+/** Страница данных в виде, удобном интерфейсу. */
+export interface Page<T> {
+  /** Элементы текущей страницы. */
+  data: T[];
+  /** Номер текущей страницы (с 1). */
+  currentPage: number;
+  /** Размер страницы. */
+  pageSize: number;
+  /** Общее количество страниц. */
+  totalPages: number;
+}
+
 /** Переводим ошибки axios в обычные Error с текстом из поля detail сервера. */
 api.interceptors.response.use(
   (res) => res, // успешный ответ пропускаем как есть
@@ -45,19 +65,39 @@ api.interceptors.response.use(
 /** Приводит сотрудника бэкенда к виду, удобному интерфейсу. */
 function toEmployee(e: ApiEmployee): Employee {
   const name = [e.last_name, e.first_name].filter(Boolean).join(" ");
-  return { id: e.id, name, position: e.position ?? "" };
+  return {
+    id: e.id,
+    name,
+    firstName: e.first_name,
+    lastName: e.last_name,
+    position: e.position ?? "",
+  };
 }
 
-/** GET /employees — список сотрудников. */
-export async function fetchEmployees(): Promise<Employee[]> {
-  const { data } = await api.get<ApiEmployee[]>("/employees");
-  return data.map(toEmployee);
+/** GET /employees — страница списка сотрудников. */
+export async function fetchEmployees(currentPage = 1, pageSize = 10): Promise<Page<Employee>> {
+  const { data } = await api.get<ApiPage<ApiEmployee>>("/employees", {
+    params: { current_page: currentPage, page_size: pageSize },
+  });
+  return {
+    data: data.data.map(toEmployee),
+    currentPage: data.current_page,
+    pageSize: data.page_size,
+    totalPages: data.total_pages,
+  };
 }
 
-/** GET /skills — список навыков. */
-export async function fetchSkills(): Promise<Skill[]> {
-  const { data } = await api.get<Skill[]>("/skills");
-  return data;
+/** GET /skills — страница списка навыков. */
+export async function fetchSkills(currentPage = 1, pageSize = 10): Promise<Page<Skill>> {
+  const { data } = await api.get<ApiPage<Skill>>("/skills", {
+    params: { current_page: currentPage, page_size: pageSize },
+  });
+  return {
+    data: data.data,
+    currentPage: data.current_page,
+    pageSize: data.page_size,
+    totalPages: data.total_pages,
+  };
 }
 
 /** GET /employees/{id}/skills — навыки сотрудника с уровнями. */
@@ -88,4 +128,92 @@ export async function createEmployee(
 /** POST /skills — создать навык. */
 export async function createSkill(name: string, category: string): Promise<void> {
   await api.post("/skills", { name, category });
+}
+
+/** PATCH /employees/{id} — обновить данные сотрудника (поля опциональны). */
+export async function updateEmployee(
+  id: number,
+  fields: { first_name?: string; last_name?: string; position?: string },
+): Promise<void> {
+  await api.patch(`/employees/${id}`, fields);
+}
+
+/** DELETE /employees/{id} — удалить сотрудника. */
+export async function deleteEmployee(id: number): Promise<void> {
+  await api.delete(`/employees/${id}`);
+}
+
+/** PATCH /skills/{id} — обновить навык (бэкенд ожидает оба поля). */
+export async function updateSkill(id: number, name: string, category: string): Promise<void> {
+  await api.patch(`/skills/${id}`, { name, category });
+}
+
+/** DELETE /skills/{id} — удалить навык. */
+export async function deleteSkill(id: number): Promise<void> {
+  await api.delete(`/skills/${id}`);
+}
+
+/** DELETE /employees/{empId}/skills/{skillId} — снять навык у сотрудника. */
+export async function removeEmployeeSkill(empId: number, skillId: number): Promise<void> {
+  await api.delete(`/employees/${empId}/skills/${skillId}`);
+}
+
+/** Бронь в формате бэкенда (полные даты-время начала и конца). */
+interface ApiBooking {
+  id: number;
+  employee_id: number;
+  topic: string;
+  start_time: string;
+  end_time: string;
+}
+
+/** Часы/минуты из ISO-времени. Календарь оперирует «настенными» часами в UTC,
+ *  поэтому читаем и пишем время единообразно в UTC — без сдвигов часового пояса. */
+function parseHM(iso: string): { h: number; m: number } {
+  const d = new Date(iso);
+  return { h: d.getUTCHours(), m: d.getUTCMinutes() };
+}
+
+/** Собирает ISO-datetime (UTC) из дня (YYYY-MM-DD) и часа/минуты. */
+function isoDateTime(date: string, h: number, m: number): string {
+  const hh = String(h).padStart(2, "0");
+  const mm = String(m).padStart(2, "0");
+  return `${date}T${hh}:${mm}:00Z`;
+}
+
+/** Приводит бронь бэкенда к виду, удобному календарю. */
+function toBooking(b: ApiBooking): Booking {
+  const s = parseHM(b.start_time);
+  const e = parseHM(b.end_time);
+  return {
+    id: b.id,
+    topic: b.topic,
+    empId: b.employee_id,
+    startH: s.h,
+    startM: s.m,
+    endH: e.h,
+    endM: e.m,
+  };
+}
+
+/** GET /bookings — брони за указанный день (YYYY-MM-DD). */
+export async function fetchBookings(date: string): Promise<Booking[]> {
+  const { data } = await api.get<ApiBooking[]>("/bookings", { params: { book_date: date } });
+  return data.map(toBooking);
+}
+
+/** POST /bookings — создать бронь на указанный день. */
+export async function createBooking(date: string, draft: BookingDraft): Promise<Booking> {
+  const { data } = await api.post<ApiBooking>("/bookings", {
+    employee_id: draft.empId,
+    topic: draft.topic,
+    start_time: isoDateTime(date, draft.startH, draft.startM),
+    end_time: isoDateTime(date, draft.endH, draft.endM),
+  });
+  return toBooking(data);
+}
+
+/** DELETE /bookings/{id} — удалить бронь. */
+export async function deleteBooking(id: number): Promise<void> {
+  await api.delete(`/bookings/${id}`);
 }

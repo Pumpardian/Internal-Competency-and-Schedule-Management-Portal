@@ -1,35 +1,37 @@
 /**
  * Страница «Переговорная» (подсистема «Бронирование переговорной»).
  *
- * Показывает календарь рабочего дня с занятыми слотами. Клик по свободному часу
- * открывает модалку создания брони. Перед добавлением выполняется проверка
- * пересечения интервалов; конфликт отклоняется уведомлением «409 Conflict»
- * (имитация серверной логики).
+ * Показывает календарь рабочего дня с занятыми слотами. Данные приходят с
+ * бэкенда (брони за выбранный день). Клик по свободному часу открывает модалку
+ * создания; проверку пересечения интервалов делает сервер (ответ 409).
  */
 import { useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
 import { CAL_END, CAL_START, HOUR_PX } from "../data";
+import { useBookings } from "../hooks/useBookings";
 import type { Booking, BookingDraft, Employee, TimeRange, ToastInput } from "../types";
-import { fmt, overlaps } from "../utils";
+import { fmt } from "../utils";
 import { BookingModal } from "./BookingModal";
 
 interface RoomPageProps {
   /** Справочник сотрудников (организаторы броней). */
   employees: Employee[];
-  /** Текущий список броней. */
-  bookings: Booking[];
-  /** Сеттер списка броней. */
-  setBookings: Dispatch<SetStateAction<Booking[]>>;
   /** Показ всплывающего уведомления. */
   push: (t: ToastInput) => void;
 }
 
+/** Извлекает текст ошибки из произвольного исключения. */
+function errMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
 /** Страница календаря броней переговорной. */
-export function RoomPage({ employees, bookings, setBookings, push }: RoomPageProps) {
+export function RoomPage({ employees, push }: RoomPageProps) {
   // Просматриваемый день (YYYY-MM-DD).
   const [date, setDate] = useState("2026-06-08");
   // Интервал, для которого открыта модалка создания (или null).
   const [modal, setModal] = useState<TimeRange | null>(null);
+  // Брони текущего дня с бэкенда.
+  const { bookings, loading, error, reload, addBooking, removeBooking } = useBookings(date);
 
   /** Сдвинуть просматриваемую дату на delta дней. */
   const shiftDate = (delta: number) => {
@@ -38,26 +40,26 @@ export function RoomPage({ employees, bookings, setBookings, push }: RoomPagePro
     setDate(d.toISOString().slice(0, 10));
   };
 
-  /**
-   * Создать бронь с имитацией серверной проверки конфликтов.
-   * @returns true — бронь создана; false — отклонена из-за пересечения (409).
-   */
-  const createBooking = (data: BookingDraft): boolean => {
-    // Серверная логика (имитация): ищем пересечение с существующими бронями.
-    const conflict = bookings.find((b) => overlaps(b, data));
-    if (conflict) {
-      push({
-        type: "error",
-        title: "409 Conflict",
-        msg: "Интервал пересекается с бронью «" + conflict.topic + "».",
-      });
-      return false;
+  /** Создать бронь на сервере; при успехе закрыть модалку. */
+  const createBooking = async (data: BookingDraft) => {
+    try {
+      await addBooking(data);
+      push({ title: "Бронь создана", msg: data.topic + " · 201 Created" });
+      setModal(null);
+    } catch (e) {
+      // Сервер отклоняет пересечение интервалов (409) — показываем его текст.
+      push({ type: "error", title: "Ошибка", msg: errMessage(e) });
     }
-    // Новый id = максимальный существующий + 1.
-    const id = Math.max(0, ...bookings.map((b) => b.id)) + 1;
-    setBookings((prev) => [...prev, { ...data, id }]);
-    push({ title: "Бронь создана", msg: data.topic + " · 201 Created" });
-    return true;
+  };
+
+  /** Отменить бронь на сервере. */
+  const cancelBooking = async (b: Booking) => {
+    try {
+      await removeBooking(b.id);
+      push({ title: "Бронь отменена", msg: b.topic });
+    } catch (e) {
+      push({ type: "error", title: "Ошибка", msg: errMessage(e) });
+    }
   };
 
   // Часы сетки календаря: [CAL_START, CAL_END).
@@ -81,8 +83,21 @@ export function RoomPage({ employees, bookings, setBookings, push }: RoomPagePro
         <button className="btn" onClick={() => shiftDate(1)}>
           ▶
         </button>
-        <span className="api-hint">GET /bookings?date={date}</span>
+        <span className="api-hint">GET /bookings?book_date={date}</span>
+        {loading && <span className="api-hint">Загрузка…</span>}
       </div>
+
+      {/* Ошибка загрузки броней с сервера. */}
+      {error && !loading && (
+        <div className="card" style={{ color: "var(--danger)", marginBottom: 16 }}>
+          Не удалось загрузить брони: {error}
+          <div style={{ marginTop: 10 }}>
+            <button className="btn" onClick={reload}>
+              Повторить
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="card" style={{ padding: 0 }}>
         <div className="calendar">
@@ -120,10 +135,7 @@ export function RoomPage({ employees, bookings, setBookings, push }: RoomPagePro
                   <span
                     className="ev-del"
                     title="Отменить (DELETE /bookings/{id})"
-                    onClick={() => {
-                      setBookings((prev) => prev.filter((x) => x.id !== b.id));
-                      push({ title: "Бронь отменена", msg: b.topic });
-                    }}
+                    onClick={() => void cancelBooking(b)}
                   >
                     ×
                   </span>
@@ -145,10 +157,7 @@ export function RoomPage({ employees, bookings, setBookings, push }: RoomPagePro
           date={date}
           init={modal}
           onClose={() => setModal(null)}
-          onSubmit={(data) => {
-            const ok = createBooking(data);
-            if (ok) setModal(null);
-          }}
+          onSubmit={(data) => void createBooking(data)}
         />
       )}
     </div>
