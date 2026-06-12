@@ -12,3 +12,7 @@ class Config:
     # Источники, которым разрешён CORS, задаются в .env через запятую.
     # split превращает строку в список адресов - для CORSMiddleware
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', '').split(',')
+
+    AUTH_SECRET = os.getenv('AUTH_SECRET')
+
+    AUTH_ALGORITHM = os.getenv('AUTH_ALGORITHM')

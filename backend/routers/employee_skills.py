@@ -163,7 +163,12 @@ def add_employee_skill(
     db.add(employee_skill)
     db.commit()
     db.refresh(employee_skill)
-    return employee_skill
+    return {
+        "id": skill.id,
+        "name": skill.name,
+        "category": skill.category,
+        "level": employee_skill.level
+    }
 
 
 @router.patch(
@@ -219,11 +224,11 @@ def update_employee_skill(
     "/employees/{employee_id}/skills/{skill_id}",
     response_class=JSONResponse,
     status_code=200,
-    response_model=dict,
+    response_model=DeleteResponse,
     summary="Удалить навык у сотрудника",
     responses={
-        200: {"description": "Сотрудник удален", "model": DeleteResponse    },
-        404: {"description": "Сотрудник не найден"},
+        200: {"description": "Навык сотрудника удален", "model": DeleteResponse},
+        404: {"description": "Навык сотрудника не найден"},
     }
 )
 def delete_employee_skill(
@@ -235,8 +240,8 @@ def delete_employee_skill(
     Удаление навыка у сотрудника.
     
     Параметры пути:
-    - **employee_id**: Уникальный идентификатор сотрудника, целочисленного типа (обязательно).
-    - **skill_id**: Уникальный идентификатор навыка, целочисленного типа (обязательно).
+    - **employee_id**: Уникальный идентификатор сотрудника **[int]** (обязательно).
+    - **skill_id**: Уникальный идентификатор навыка **[int]** (обязательно).
     
     Возвращает сообщение об успешном удалении навыка у сотрудника.
     '''
