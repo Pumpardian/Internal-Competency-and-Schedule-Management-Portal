@@ -3,17 +3,16 @@
  *
  * Матрицу компетенций (сотрудники, навыки, уровни) загружает с бэкенда через
  * хук useCompetency и передаёт на страницу «Команда и навыки». Брони
- * переговорной пока хранятся локально (заглушка) — серверной части для них нет.
+ * переговорной грузит страница RoomPage через хук useBookings (тоже с бэкенда).
  */
 import { useState } from "react";
 import { Header } from "./components/Header";
 import { RoomPage } from "./components/RoomPage";
 import { TeamPage } from "./components/TeamPage";
 import { Toasts } from "./components/Toasts";
-import { INITIAL_BOOKINGS } from "./data";
 import { useCompetency } from "./hooks/useCompetency";
 import { useToasts } from "./hooks/useToasts";
-import type { Booking, Page } from "./types";
+import type { Page } from "./types";
 
 /** Приложение: шапка, активная страница и слой уведомлений. */
 export default function App() {
@@ -21,10 +20,28 @@ export default function App() {
   const [page, setPage] = useState<Page>("team");
   const [user, setUser] = useState("admin");
   // Матрица компетенций с бэкенда.
-  const { employees, skills, levels, loading, error, reload, setLevel, addEmployee, addSkill } =
-    useCompetency();
-  // Брони переговорной — пока локальная заглушка.
-  const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
+  const {
+    employees,
+    skills,
+    levels,
+    loading,
+    error,
+    reload,
+    setLevel,
+    addEmployee,
+    addSkill,
+    editEmployee,
+    removeEmployee,
+    editSkill,
+    removeSkill,
+    removeSkillFromEmployee,
+    employeePage,
+    employeeTotalPages,
+    setEmployeePage,
+    skillPage,
+    skillTotalPages,
+    setSkillPage,
+  } = useCompetency();
   const { toasts, push } = useToasts();
 
   return (
@@ -42,10 +59,21 @@ export default function App() {
           onSetLevel={setLevel}
           onAddEmployee={addEmployee}
           onAddSkill={addSkill}
+          onEditEmployee={editEmployee}
+          onRemoveEmployee={removeEmployee}
+          onEditSkill={editSkill}
+          onRemoveSkill={removeSkill}
+          onRemoveSkillFromEmployee={removeSkillFromEmployee}
+          employeePage={employeePage}
+          employeeTotalPages={employeeTotalPages}
+          onEmployeePage={setEmployeePage}
+          skillPage={skillPage}
+          skillTotalPages={skillTotalPages}
+          onSkillPage={setSkillPage}
           push={push}
         />
       ) : (
-        <RoomPage employees={employees} bookings={bookings} setBookings={setBookings} push={push} />
+        <RoomPage employees={employees} push={push} />
       )}
       <Toasts toasts={toasts} />
     </>
