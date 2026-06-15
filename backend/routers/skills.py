@@ -8,6 +8,7 @@ from math import ceil
 
 from models import Skill, skill_categories
 from dependencies import get_db
+from utils.auth import user_dependency, require_permission
 
 router = APIRouter()
 
@@ -44,7 +45,7 @@ class SkillResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class DeleteResponse(BaseModel):
+class DeleteSkillResponse(BaseModel):
     """Модель ответа при удалении"""
     message: str = Field(..., description="Сообщение об операции", examples=["Навык был успешно удален"])
 
@@ -67,9 +68,11 @@ class PagenatedSkillResponse(BaseModel):
     responses={
         200: {"description": "Страница из списка навыков", "model": PagenatedSkillResponse},
         400: {"description": "Неверные данные"},
+        401: {"description": "Не авторизован"},
     }
 )
 def get_skills(
+    user: user_dependency,
     current_page: int = Query(default=1, description="Номер текущей страницы", examples=[2], ge=1),
     page_size: int = Query(default=10, description="Размер страницы (1-20)", examples=[10], ge=1, le=20),
     db: Session = Depends(get_db)
@@ -106,11 +109,13 @@ def get_skills(
     summary="Получить навык по уникальному идентификатору",
     responses={
         200: {"description": "Навык найден", "model": SkillResponse},
+        401: {"description": "Не авторизован"},
         404: {"description": "Навык не найден"},
         422: {"description": "Неверный формат уникального идентификатора"}
     }
 )
 def get_skill(
+    user: user_dependency,
     id: int = Path(..., description="Уникальный идентификатор навыка", ge=1, examples=[1]),
     db: Session = Depends(get_db)
 ):
@@ -142,11 +147,14 @@ def get_skill(
     responses={
         201: {"description": "Навык создан", "model": SkillResponse},
         400: {"description": "Неверные данные"},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
         409: {"description": "Навык уже существует"},
     }
 )
 def add_skill(
     skill_data: SkillCreateOrUpdate = Body(...),
+    user: dict = Depends(require_permission("skill.create")),
     db: Session = Depends(get_db)
 ):
     '''
@@ -188,6 +196,8 @@ def add_skill(
     responses={
         200: {"description": "Навык обновлен", "model": SkillResponse},
         400: {"description": "Неверные данные"},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
         404: {"description": "Навык не найден"},
         409: {"description": "Навык уже существует"},
     }
@@ -195,6 +205,7 @@ def add_skill(
 def update_skill(
     id: int = Path(..., description="Уникальный идентификатор навыка", ge=1, examples=[1]),
     skill_data: SkillCreateOrUpdate = Body(...),
+    user: dict = Depends(require_permission("skill.update")),
     db: Session = Depends(get_db)
 ):
     '''
@@ -244,15 +255,18 @@ def update_skill(
 @router.delete(
     "/skills/{id}", 
     response_class=JSONResponse,
-    response_model=DeleteResponse,
+    response_model=DeleteSkillResponse,
     summary="Удалить навык",
     responses={
-        200: {"description": "Навык удален", "model": DeleteResponse},
+        200: {"description": "Навык удален", "model": DeleteSkillResponse},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
         404: {"description": "Навык не найден"},
     }
 )
 def delete_skill(
     id: int = Path(..., description="Уникальный идентификатор навыка", ge=1, examples=[1]),
+    user: dict = Depends(require_permission("skill.delete")),
     db: Session = Depends(get_db)
 ):
     '''

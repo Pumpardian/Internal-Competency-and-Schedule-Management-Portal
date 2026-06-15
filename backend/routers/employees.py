@@ -9,6 +9,7 @@ from math import ceil
 
 from models import Employee
 from dependencies import get_db
+from utils.auth import user_dependency, require_permission
 
 router = APIRouter()
 
@@ -51,7 +52,7 @@ class EmployeeResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class DeleteResponse(BaseModel):
+class DeleteEmployeeResponse(BaseModel):
     """Модель ответа при удалении"""
     message: str = Field(..., description="Сообщение об операции", examples=["Сотрудник успешно удален"])
 
@@ -78,9 +79,11 @@ class PagenatedEmployeeResponse(BaseModel):
     responses={
         200: {"description": "Страница из списка сотрудников", "model": PagenatedEmployeeResponse},
         400: {"description": "Неверные данные"},
+        401: {"description": "Не авторизован"},
     }
 )
 def get_employees(
+    user: user_dependency,
     current_page: int = Query(default=1, description="Номер текущей страницы", examples=[2], ge=1),
     page_size: int = Query(default=10, description="Размер страницы (1-20)", examples=[10], ge=1, le=20),
     db: Session = Depends(get_db)
@@ -117,10 +120,12 @@ def get_employees(
     summary="Получить сотрудника по уникальному идентификатору",
     responses={
         200: {"description": "Сотрудник найден", "model": EmployeeResponse},
+        401: {"description": "Не авторизован"},
         404: {"description": "Сотрудник не найден"},
     }
 )
 def get_employee(
+    user: user_dependency,
     id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
     db: Session = Depends(get_db)
 ):
@@ -152,11 +157,14 @@ def get_employee(
     responses={
         201: {"description": "Сотрудник создан", "model": EmployeeResponse},
         400: {"description": "Неверные данные"},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
         409: {"description": "Сотрудник уже существует"},
     }
 )
 def add_employee(
     employee_data: EmployeeCreate,
+    user: dict = Depends(require_permission("employee.create")),
     db: Session = Depends(get_db)
 ):
     '''
@@ -205,6 +213,8 @@ def add_employee(
     responses={
         200: {"description": "Сотрудник обновлен", "model": EmployeeResponse},
         400: {"description": "Неверные данные"},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
         404: {"description": "Сотрудник не найден"},
         409: {"description": "Сотрудник уже существует"},
     }
@@ -212,6 +222,7 @@ def add_employee(
 def update_employee(
     id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
     employee_data: EmployeeUpdate = Body(...),
+    user: dict = Depends(require_permission("employee.update")),
     db: Session = Depends(get_db)
 ):
     '''
@@ -272,15 +283,18 @@ def update_employee(
 @router.delete(
     "/employees/{id}", 
     response_class=JSONResponse,
-    response_model=DeleteResponse,
+    response_model=DeleteEmployeeResponse,
     summary="Удалить сотрудника",
     responses={
-        200: {"description": "Сотрудник удален", "model": DeleteResponse},
+        200: {"description": "Сотрудник удален", "model": DeleteEmployeeResponse},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
         404: {"description": "Сотрудник не найден"},
     }
 )
 def delete_employee(
     id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
+    user: dict = Depends(require_permission("employee.delete")),
     db: Session = Depends(get_db)
 ):
     '''
