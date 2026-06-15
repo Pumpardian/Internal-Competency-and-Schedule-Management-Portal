@@ -71,6 +71,8 @@ function toEmployee(e: ApiEmployee): Employee {
     firstName: e.first_name,
     lastName: e.last_name,
     position: e.position ?? "",
+    photoUrl: e.photo_url ?? undefined,
+    createdAt: e.created_at,
   };
 }
 
@@ -85,6 +87,12 @@ export async function fetchEmployees(currentPage = 1, pageSize = 10): Promise<Pa
     pageSize: data.page_size,
     totalPages: data.total_pages,
   };
+}
+
+/** GET /employees/{id} — детальные данные одного сотрудника (для профиля). */
+export async function fetchEmployee(id: number): Promise<Employee> {
+  const { data } = await api.get<ApiEmployee>(`/employees/${id}`);
+  return toEmployee(data);
 }
 
 /** GET /skills — страница списка навыков. */

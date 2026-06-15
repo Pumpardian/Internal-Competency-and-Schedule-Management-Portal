@@ -7,6 +7,8 @@
  */
 import { useState } from "react";
 import { Header } from "./components/Header";
+import { LoginPage } from "./components/LoginPage";
+import { ProfilePage } from "./components/ProfilePage";
 import { RoomPage } from "./components/RoomPage";
 import { TeamPage } from "./components/TeamPage";
 import { Toasts } from "./components/Toasts";
@@ -48,7 +50,7 @@ export default function App() {
     <>
       <Header page={page} setPage={setPage} user={user} setUser={setUser} />
       {/* Простейший «роутинг» переключением по состоянию page. */}
-      {page === "team" ? (
+      {page === "team" && (
         <TeamPage
           employees={employees}
           skills={skills}
@@ -72,9 +74,12 @@ export default function App() {
           onSkillPage={setSkillPage}
           push={push}
         />
-      ) : (
-        <RoomPage employees={employees} push={push} />
       )}
+      {page === "room" && <RoomPage employees={employees} push={push} />}
+      {page === "profile" && <ProfilePage employees={employees} />}
+      {/* Маршрут страницы авторизации заведён, но в навигацию не выведен и без
+          серверной логики — подключение появится вместе с JWT на бэкенде. */}
+      {page === "login" && <LoginPage />}
       <Toasts toasts={toasts} />
     </>
   );

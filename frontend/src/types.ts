@@ -18,6 +18,10 @@ export interface Employee {
   lastName: string;
   /** Должность сотрудника. */
   position: string;
+  /** Ссылка на фото (заполняется для детального ответа GET /employees/{id}). */
+  photoUrl?: string;
+  /** Дата создания записи (заполняется для детального ответа GET /employees/{id}). */
+  createdAt?: string;
 }
 
 /** Профессиональный навык (справочник «Навык»). */
@@ -78,4 +82,4 @@ export interface Toast extends ToastInput {
 }
 
 /** Активная страница портала. */
-export type Page = "team" | "room";
+export type Page = "team" | "room" | "profile" | "login";
