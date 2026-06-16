@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from models import Employee, Skill, EmployeeSkill
 from dependencies import get_db
+from utils.auth import user_dependency, require_permission
 
 router = APIRouter()
 
@@ -34,8 +35,8 @@ class EmployeeSkillDetailResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class DeleteResponse(BaseModel):
-    """Модель ответа при удалении"""
+class DeleteEmployeeSkillResponse(BaseModel):
+    """Модель ответа при удалении навыка сотрудника"""
     message: str = Field(..., description="Сообщение об операции", examples=["Навык (ID: {skill_id}) успешно удален у сотрудника (ID: {employee_id})"])
 
 #Эндпоинты
@@ -46,10 +47,12 @@ class DeleteResponse(BaseModel):
     summary="Получить навыки сотрудника",
     responses={
         200: {"description": "Навыки сотрудника", "model": List[EmployeeSkillResponse]},
+        401: {"description": "Не авторизован"},
         404: {"description": "Сотрудник не найден"},
     }
 )
 def get_employee_skills(
+    user: user_dependency,
     id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
     db: Session = Depends(get_db)
 ):
@@ -104,6 +107,8 @@ def get_employee_skills(
     responses={
         201: {"description": "Навык сотрудника создан", "model": EmployeeSkillResponse},
         400: {"description": "Неверные данные"},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
         409: {"description": "Навык сотрудника уже существует"},
     }
 )
@@ -111,6 +116,7 @@ def add_employee_skill(
     employee_id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
     skill_id: int = Path(..., description="Уникальный идентификатор навыка", ge=1, examples=[1]),
     skill_data: EmployeeSkillCreateOrUpdate = Body(...),
+    user: dict = Depends(require_permission("employee_skill.create")),
     db: Session = Depends(get_db)
 ):
     '''
@@ -163,7 +169,12 @@ def add_employee_skill(
     db.add(employee_skill)
     db.commit()
     db.refresh(employee_skill)
-    return employee_skill
+    return {
+        "id": skill.id,
+        "name": skill.name,
+        "category": skill.category,
+        "level": employee_skill.level
+    }
 
 
 @router.patch(
@@ -174,6 +185,8 @@ def add_employee_skill(
     responses={
         200: {"description": "Навык сотрудника обновлен", "model": EmployeeSkillResponse},
         400: {"description": "Неверные данные"},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
         409: {"description": "Навык сотрудника уже существует"},
     }
 )
@@ -181,6 +194,7 @@ def update_employee_skill(
     employee_id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
     skill_id: int = Path(..., description="Уникальный идентификатор навыка", ge=1, examples=[1]),
     skill_data: EmployeeSkillCreateOrUpdate = Body(...),
+    user: dict = Depends(require_permission("employee_skill.update")),
     db: Session = Depends(get_db)
 ):
     '''
@@ -219,24 +233,27 @@ def update_employee_skill(
     "/employees/{employee_id}/skills/{skill_id}",
     response_class=JSONResponse,
     status_code=200,
-    response_model=dict,
+    response_model=DeleteEmployeeSkillResponse,
     summary="Удалить навык у сотрудника",
     responses={
-        200: {"description": "Сотрудник удален", "model": DeleteResponse    },
-        404: {"description": "Сотрудник не найден"},
+        200: {"description": "Навык сотрудника удален", "model": DeleteEmployeeSkillResponse},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
+        404: {"description": "Навык сотрудника не найден"},
     }
 )
 def delete_employee_skill(
     employee_id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
     skill_id: int = Path(..., description="Уникальный идентификатор навыка", ge=1, examples=[1]),
+    user: dict = Depends(require_permission("employee_skill.delete")),
     db: Session = Depends(get_db)
 ):
     '''
     Удаление навыка у сотрудника.
     
     Параметры пути:
-    - **employee_id**: Уникальный идентификатор сотрудника, целочисленного типа (обязательно).
-    - **skill_id**: Уникальный идентификатор навыка, целочисленного типа (обязательно).
+    - **employee_id**: Уникальный идентификатор сотрудника **[int]** (обязательно).
+    - **skill_id**: Уникальный идентификатор навыка **[int]** (обязательно).
     
     Возвращает сообщение об успешном удалении навыка у сотрудника.
     '''

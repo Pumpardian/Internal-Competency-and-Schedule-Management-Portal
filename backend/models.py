@@ -1,7 +1,7 @@
 from sqlalchemy.sql import func
-from sqlalchemy.orm import DeclarativeBase, validates
+from sqlalchemy.orm import DeclarativeBase, validates, relationship
 from sqlalchemy import Column, Integer, String, ForeignKey, Index \
-, CheckConstraint, UniqueConstraint, SmallInteger, TIMESTAMP
+, CheckConstraint, UniqueConstraint, SmallInteger, TIMESTAMP, Boolean
 from sqlalchemy.dialects.postgresql import ENUM, TSTZRANGE, ExcludeConstraint
 
 #Модели
@@ -16,6 +16,14 @@ class Employee(Base):
     position = Column(String(150), nullable=True)
     photo_url = Column(String(500), nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete='SET NULL', onupdate='CASCADE'),
+        unique=True,
+        nullable=True
+    )
+    
+    user = relationship("User", back_populates="employee")
 
     __table_args__ = (
         Index("idx_employee_name", "last_name", "first_name"),
@@ -102,4 +110,59 @@ class Booking(Base):
         ),
         Index("idx_booking_start_time", "start_time"),
         Index("idx_booking_employee_id", "employee_id"),
+    )
+
+
+class Role(Base):
+    __tablename__ = "roles"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), unique=True, nullable=False)
+
+
+class Permission(Base):
+    __tablename__ = "permissions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), unique=True, nullable=False)
+
+
+class RolePermission(Base):
+    __tablename__ = "role_permissions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    role_id = Column(
+        Integer,
+        ForeignKey("roles.id", ondelete='CASCADE', onupdate='CASCADE'),
+        nullable=False
+    )
+    permission_id = Column(
+        Integer,
+        ForeignKey("permissions.id", ondelete='CASCADE', onupdate='CASCADE'),
+        nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint("role_id", "permission_id", name="unique_role_permission"),
+        Index("idx_role_permission_role", "role_id"),
+        Index("idx_role_permission_permission", "permission_id")
+    )
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(30), unique=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    role_id = Column(
+        Integer,
+        ForeignKey("roles.id", ondelete='RESTRICT', onupdate='CASCADE'),
+        nullable=False
+    )
+
+    employee = relationship("Employee", back_populates="user", uselist=False)
+
+    __table_args__ = (
+        Index("idx_user_username", "username"),
     )

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Body, Path, Query
+import json
+from fastapi import APIRouter, Depends, Form, HTTPException, Body \
+, Path, Query, UploadFile, File
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_, func
@@ -7,8 +9,10 @@ from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 from math import ceil
 
+from utils.upload import save_employee_photo, delete_employee_photo
 from models import Employee
 from dependencies import get_db
+from utils.auth import user_dependency, require_permission
 
 router = APIRouter()
 
@@ -18,7 +22,7 @@ class EmployeeCreate(BaseModel):
     first_name: str = Field(..., min_length=1, max_length=100, description="Имя сотрудника", examples=["Иван"])
     last_name: str = Field(..., min_length=1, max_length=100, description="Фамилия сотрудника", examples=["Иванов"])
     position: Optional[str] = Field(None, max_length=150, description="Должность", examples=["Разработчик"])
-    photo_url: Optional[str] = Field(None, max_length=500, description="Ссылка на фото сотрудника", examples=["https://example.com/photo.jpg"])
+    #photo_url: Optional[str] = Field(None, max_length=500, description="Ссылка на фото сотрудника", examples=["https://example.com/photo.jpg"])
     
     @field_validator('first_name', 'last_name')
     @classmethod
@@ -31,9 +35,9 @@ class EmployeeUpdate(BaseModel):
     first_name: Optional[str] = Field(None, min_length=1, max_length=100, description="Имя сотрудника", examples=["Иван"])
     last_name: Optional[str] = Field(None, min_length=1, max_length=100, description="Фамилия сотрудника", examples=["Иванов"])
     position: Optional[str] = Field(None, max_length=150, description="Должность", examples=["Ведущий разработчик"])
-    photo_url: Optional[str] = Field(None, max_length=500, description="Ссылка на фото сотрудника", examples=["https://example.com/new_photo.jpg"])
+    #photo_url: Optional[str] = Field(None, max_length=500, description="Ссылка на фото сотрудника", examples=["https://example.com/new_photo.jpg"])
     
-    @field_validator('first_name', 'last_name', 'position', 'photo_url')
+    @field_validator('first_name', 'last_name', 'position')
     @classmethod
     def strip_fields(cls, v: Optional[str]) -> Optional[str]:
         """Удаляем пробелы в начале и конце, если значение не None"""
@@ -51,8 +55,8 @@ class EmployeeResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class DeleteResponse(BaseModel):
-    """Модель ответа при удалении"""
+class DeleteEmployeeResponse(BaseModel):
+    """Модель ответа при удалении сотрудника"""
     message: str = Field(..., description="Сообщение об операции", examples=["Сотрудник успешно удален"])
 
 class PagenatedEmployeeResponse(BaseModel):
@@ -78,9 +82,11 @@ class PagenatedEmployeeResponse(BaseModel):
     responses={
         200: {"description": "Страница из списка сотрудников", "model": PagenatedEmployeeResponse},
         400: {"description": "Неверные данные"},
+        401: {"description": "Не авторизован"},
     }
 )
 def get_employees(
+    user: user_dependency,
     current_page: int = Query(default=1, description="Номер текущей страницы", examples=[2], ge=1),
     page_size: int = Query(default=10, description="Размер страницы (1-20)", examples=[10], ge=1, le=20),
     db: Session = Depends(get_db)
@@ -117,10 +123,12 @@ def get_employees(
     summary="Получить сотрудника по уникальному идентификатору",
     responses={
         200: {"description": "Сотрудник найден", "model": EmployeeResponse},
+        401: {"description": "Не авторизован"},
         404: {"description": "Сотрудник не найден"},
     }
 )
 def get_employee(
+    user: user_dependency,
     id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
     db: Session = Depends(get_db)
 ):
@@ -152,11 +160,16 @@ def get_employee(
     responses={
         201: {"description": "Сотрудник создан", "model": EmployeeResponse},
         400: {"description": "Неверные данные"},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
         409: {"description": "Сотрудник уже существует"},
+        500: {"description": "Ошибка сервера"}
     }
 )
-def add_employee(
-    employee_data: EmployeeCreate,
+async def add_employee(
+    form: str = Form(...),
+    photo: Optional[UploadFile] = File(None, description="Фото сотрудника (jpg, png, gif, webp, bmp) до 5 МБ"),
+    user: dict = Depends(require_permission("employee.create")),
     db: Session = Depends(get_db)
 ):
     '''
@@ -166,31 +179,55 @@ def add_employee(
     - **first_name**: Имя сотрудника, **[string]** (обязательно, 1-100 символов).
     - **last_name**: Фамилия сотрудника **[string]** (обязательно, 1-100 символов).
     - **position**: Должность **[string]** (опционально, до 150 символов).
-    - **photo_url**: Ссылка на фото **[string]** (опционально, до 500 символов).
+    - **photo_url**: Фото **[file]** (опционально, форматы: jpg, png, gif, webp, bmp до 5 МБ).
     
     Возвращает созданного сотрудника с присвоенным уникальным идентификатором.
     '''
     
+    try:
+        request_data = json.loads(form)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=400,
+            detail="Неправильный формат JSON"
+        )
+
+    try:
+        validated_data = EmployeeCreate(**request_data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Ошибка валидации: {str(e)}"
+        )
+    
     statement = select(Employee).where(
         and_(
-            Employee.first_name == employee_data.first_name,
-            Employee.last_name == employee_data.last_name
+            Employee.first_name == validated_data.first_name,
+            Employee.last_name == validated_data.last_name
         )
     )
     existing_employee = db.execute(statement).scalar_one_or_none()
     if existing_employee:
         raise HTTPException(
             status_code=409,
-            detail=f"Сотрудник '{employee_data.last_name} {employee_data.first_name}' уже существует"
+            detail=f"Сотрудник '{validated_data.last_name} {validated_data.first_name}' уже существует"
         )
     
     employee = Employee(
-        first_name=employee_data.first_name,
-        last_name=employee_data.last_name,
-        position=employee_data.position,
-        photo_url=employee_data.photo_url,
+        first_name=validated_data.first_name,
+        last_name=validated_data.last_name,
+        position=validated_data.position,
         created_at=datetime.now()
     )
+
+    photo_url = None
+    if photo and photo.filename:
+        try:
+            photo_url = await save_employee_photo(photo)
+            employee.photo_url = photo_url
+        except HTTPException as e:
+            raise e
+
     db.add(employee)
     db.commit()
     db.refresh(employee)
@@ -205,13 +242,17 @@ def add_employee(
     responses={
         200: {"description": "Сотрудник обновлен", "model": EmployeeResponse},
         400: {"description": "Неверные данные"},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
         404: {"description": "Сотрудник не найден"},
         409: {"description": "Сотрудник уже существует"},
     }
 )
-def update_employee(
+async def update_employee(
     id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
-    employee_data: EmployeeUpdate = Body(...),
+    form: str = Form(...),
+    photo: Optional[UploadFile] = File(None, description="Фото сотрудника (jpg, png, gif, webp, bmp) до 5 МБ"),
+    user: dict = Depends(require_permission("employee.update")),
     db: Session = Depends(get_db)
 ):
     '''
@@ -224,11 +265,27 @@ def update_employee(
     - **first_name**: Имя сотрудника **[string]** (1-100 символов).
     - **last_name**: Фамилия сотрудника **[string]** (1-100 символов).
     - **position**: Должность **[string]** (до 150 символов).
-    - **photo_url**: Ссылка на фото **[string]** (до 500 символов).
+    - **photo**: Фото **[file]** (форматы jpg, png, gif, webp, bmp до 5 МБ).
     
     Возвращает сотрудника с обновленными данными.
     '''
     
+    try:
+        request_data = json.loads(form)
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=400,
+            detail="Неправильный формат JSON"
+        )
+
+    try:
+        validated_data = EmployeeUpdate(**request_data)
+    except Exception as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Ошибка валидации: {str(e)}"
+        )
+
     statement = select(Employee).where(Employee.id == id)
     employee = db.execute(statement).scalar_one_or_none()
     if not employee:
@@ -237,9 +294,9 @@ def update_employee(
             detail="Сотрудник не найден"
         )
     
-    if employee_data.first_name is not None or employee_data.last_name is not None:
-        new_first_name = employee_data.first_name if employee_data.first_name is not None else employee.first_name
-        new_last_name = employee_data.last_name if employee_data.last_name is not None else employee.last_name
+    if validated_data.first_name is not None or validated_data.last_name is not None:
+        new_first_name = validated_data.first_name if validated_data.first_name is not None else employee.first_name
+        new_last_name = validated_data.last_name if validated_data.last_name is not None else employee.last_name
         
         statement = select(Employee).where(
             and_(
@@ -255,14 +312,23 @@ def update_employee(
                 detail=f"Сотрудник '{new_last_name} {new_first_name}' уже существует"
             )
     
-    if employee_data.first_name is not None:
-        employee.first_name = employee_data.first_name
-    if employee_data.last_name is not None:
-        employee.last_name = employee_data.last_name
-    if employee_data.position is not None:
-        employee.position = employee_data.position
-    if employee_data.photo_url is not None:
-        employee.photo_url = employee_data.photo_url
+    if validated_data.first_name is not None:
+        employee.first_name = validated_data.first_name
+    if validated_data.last_name is not None:
+        employee.last_name = validated_data.last_name
+    if validated_data.position is not None:
+        employee.position = validated_data.position
+    
+    photo_url = None
+    if photo and photo.filename:
+        try:
+            photo_url = await save_employee_photo(photo)
+            old_photo_url = employee.photo_url
+            employee.photo_url = photo_url
+            if old_photo_url:
+                delete_employee_photo(old_photo_url)
+        except HTTPException as e:
+            raise e
     
     db.commit()
     db.refresh(employee)
@@ -272,15 +338,18 @@ def update_employee(
 @router.delete(
     "/employees/{id}", 
     response_class=JSONResponse,
-    response_model=DeleteResponse,
+    response_model=DeleteEmployeeResponse,
     summary="Удалить сотрудника",
     responses={
-        200: {"description": "Сотрудник удален", "model": DeleteResponse},
+        200: {"description": "Сотрудник удален", "model": DeleteEmployeeResponse},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
         404: {"description": "Сотрудник не найден"},
     }
 )
 def delete_employee(
     id: int = Path(..., description="Уникальный идентификатор сотрудника", ge=1, examples=[123]),
+    user: dict = Depends(require_permission("employee.delete")),
     db: Session = Depends(get_db)
 ):
     '''
@@ -300,6 +369,11 @@ def delete_employee(
             detail="Сотрудник не найден"
         )
     
+    photo_url = employee.photo_url
     db.delete(employee)
     db.commit()
+
+    if photo_url:
+        delete_employee_photo(photo_url)
+
     return {"message": "Сотрудник успешно удален"}
