@@ -36,7 +36,7 @@ class EmployeeSkillDetailResponse(BaseModel):
         from_attributes = True
 
 class DeleteEmployeeSkillResponse(BaseModel):
-    """Модель ответа при удалении"""
+    """Модель ответа при удалении навыка сотрудника"""
     message: str = Field(..., description="Сообщение об операции", examples=["Навык (ID: {skill_id}) успешно удален у сотрудника (ID: {employee_id})"])
 
 #Эндпоинты

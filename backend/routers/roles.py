@@ -33,8 +33,8 @@ class RoleResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class DeleteResponse(BaseModel):
-    """Модель ответа при удалении"""
+class DeleteRoleResponse(BaseModel):
+    """Модель ответа при удалении роли"""
     message: str = Field(..., description="Сообщение об операции", examples=["Роль был успешно удалена"])
 
 class PagenatedRoleResponse(BaseModel):
@@ -176,7 +176,7 @@ def add_role(
         409: {"description": "Роль уже существует"},
     }
 )
-def update_skill(
+def update_role(
     id: int = Path(..., description="Уникальный идентификатор роли", ge=1, examples=[1]),
     role_data: RoleCreateOrUpdate = Body(...),
     db: Session = Depends(get_db)
@@ -224,14 +224,14 @@ def update_skill(
 @router.delete(
     "/roles/{id}", 
     response_class=JSONResponse,
-    response_model=DeleteResponse,
+    response_model=DeleteRoleResponse,
     summary="Удалить роль",
     responses={
-        200: {"description": "Роль удалена", "model": DeleteResponse},
+        200: {"description": "Роль удалена", "model": DeleteRoleResponse},
         404: {"description": "Роль не найдена"},
     }
 )
-def delete_skill(
+def delete_role(
     id: int = Path(..., description="Уникальный идентификатор роли", ge=1, examples=[1]),
     db: Session = Depends(get_db)
 ):

@@ -33,8 +33,8 @@ class PermissionResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class DeleteResponse(BaseModel):
-    """Модель ответа при удалении"""
+class DeletePermissionResponse(BaseModel):
+    """Модель ответа при удалении права"""
     message: str = Field(..., description="Сообщение об операции", examples=["Право был успешно удалено"])
 
 class PagenatedPermissionResponse(BaseModel):
@@ -176,7 +176,7 @@ def add_permission(
         409: {"description": "Право уже существует"},
     }
 )
-def update_skill(
+def update_permission(
     id: int = Path(..., description="Уникальный идентификатор права", ge=1, examples=[1]),
     permission_data: PermissionCreateOrUpdate = Body(...),
     db: Session = Depends(get_db)
@@ -224,14 +224,14 @@ def update_skill(
 @router.delete(
     "/permissions/{id}", 
     response_class=JSONResponse,
-    response_model=DeleteResponse,
+    response_model=DeletePermissionResponse,
     summary="Удалить право",
     responses={
-        200: {"description": "Право удалено", "model": DeleteResponse},
+        200: {"description": "Право удалено", "model": DeletePermissionResponse},
         404: {"description": "Право не найдено"},
     }
 )
-def delete_skill(
+def delete_permission(
     id: int = Path(..., description="Уникальный идентификатор права", ge=1, examples=[1]),
     db: Session = Depends(get_db)
 ):

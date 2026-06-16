@@ -41,7 +41,7 @@ class BookingResponse(BaseModel):
         from_attributes = True
 
 class DeleteBookingResponse(BaseModel):
-    """Модель ответа при удалении"""
+    """Модель ответа при удалении брони"""
     message: str = Field(..., description="Сообщение об операции", examples=["Бронь успешно удалена"])
 
 #Эндпоинты

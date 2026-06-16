@@ -46,6 +46,7 @@ def init_permissions(admin_role_id: int, manager_role_id: int):
         "booking.create", "booking.delete",
         "skill.create", "skill.update", "skill.delete",
         "employee_skill.create", "employee_skill.update", "employee_skill.delete",
+        "user_role.update"
     ]
 
     permission_objects: list[Permission] = []
@@ -94,9 +95,10 @@ def create_admin(admin_role_id: int):
             hashed_password=argon2_context.hash("admin"),
             role_id=admin_role_id
         )
+        db.add(admin)
         db.flush()
-        db.commit()
 
     if admin.role_id != admin_role_id:
         admin.role_id = admin_role_id
-        db.commit() 
+        
+    db.commit()

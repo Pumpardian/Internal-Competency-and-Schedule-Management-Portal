@@ -46,7 +46,7 @@ class SkillResponse(BaseModel):
         from_attributes = True
 
 class DeleteSkillResponse(BaseModel):
-    """Модель ответа при удалении"""
+    """Модель ответа при удалении навыка"""
     message: str = Field(..., description="Сообщение об операции", examples=["Навык был успешно удален"])
 
 class PagenatedSkillResponse(BaseModel):
