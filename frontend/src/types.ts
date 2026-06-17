@@ -82,4 +82,4 @@ export interface Toast extends ToastInput {
 }
 
 /** Активная страница портала. */
-export type Page = "team" | "room" | "profile" | "login";
+export type Page = "team" | "room" | "profile" | "account";

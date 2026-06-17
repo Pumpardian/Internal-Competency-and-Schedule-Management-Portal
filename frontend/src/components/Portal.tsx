@@ -8,6 +8,7 @@
  */
 import { useState } from "react";
 import { currentUser } from "../api";
+import { AccountPage } from "./AccountPage";
 import { Header } from "./Header";
 import { ProfilePage } from "./ProfilePage";
 import { RoomPage } from "./RoomPage";
@@ -84,6 +85,7 @@ export function Portal({ onLogout }: PortalProps) {
       )}
       {page === "room" && <RoomPage employees={employees} push={push} />}
       {page === "profile" && <ProfilePage employees={employees} />}
+      {page === "account" && <AccountPage push={push} />}
       <Toasts toasts={toasts} />
     </>
   );
