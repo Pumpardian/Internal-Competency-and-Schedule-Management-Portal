@@ -48,6 +48,28 @@ services:
       - app_network_dev
     restart: unless-stopped
 
+  #FRONTEND
+  frontend:
+    build:
+        context: ./frontend
+        dockerfile: Dockerfile.dev
+    container_name: vite-frontend-dev
+    command: npx vite --host
+    env_file: ./frontend/.env
+    environment:
+      # Порт, на который браузер открывает websocket HMR (внешний порт nginx)
+      - VITE_HMR_CLIENT_PORT=80
+    expose:
+      - "5173" # Порт для nginx
+    volumes:
+      # Монтируем код для хот-релоада
+      - ./frontend:/app
+      # Изолируем node_modules контейнера от хоста
+      - frontend_node_modules:/app/node_modules
+    networks:
+      - app_network_dev
+    restart: unless-stopped
+
   #NGINX
   nginx:
     image: nginx:alpine
@@ -61,12 +83,15 @@ services:
       - ./backend/static:/static-files:ro
     depends_on:
       - backend
+      - frontend
     networks:
       - app_network_dev
     restart: unless-stopped
 
 volumes:
   postgres_data_dev:
+    driver: local
+  frontend_node_modules:
     driver: local
 
 networks:
