@@ -334,8 +334,8 @@ export interface ApiRole {
  *  пользователя нет привязанного сотрудника, бэкенд отдаёт сообщение — тогда
  *  возвращаем null. */
 export async function getProfile(id: number): Promise<Employee | null> {
-  const { data } = await api.get<ApiEmployee | { message: string }>(`/users/${id}`);
-  if (!("id" in data)) return null;
+  const { data } = await api.get<ApiEmployee | null>(`/users/${id}`);
+  if (!data || typeof data !== "object" || !("id" in data)) return null;
   return toEmployee(data);
 }
 
