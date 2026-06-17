@@ -62,6 +62,7 @@ body {
   border-radius: 4px;
   padding: 3px 6px;
 }
+.header .user-name { color: #fff; font-weight: 600; }
 
 .page { max-width: 1120px; margin: 24px auto; padding: 0 20px; }
 .page h1 { font-size: 20px; margin: 0 0 4px; }
@@ -309,6 +310,24 @@ body {
 .auth-field span { font-size: 13px; color: #444; }
 .auth-field .input { width: 100%; }
 .auth-submit { margin-top: 4px; }
+.auth-error {
+  color: var(--danger);
+  font-size: 13px;
+  background: #fff0f0;
+  border: 1px solid #f3c2c2;
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+.auth-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  align-self: center;
+}
+.auth-link:hover { text-decoration: underline; }
 .mock-note {
   max-width: 1120px; margin: 0 auto 24px; padding: 10px 20px;
   color: var(--muted); font-size: 12px;
