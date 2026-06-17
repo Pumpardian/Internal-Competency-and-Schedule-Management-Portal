@@ -352,3 +352,32 @@ export async function fetchRoles(): Promise<ApiRole[]> {
   });
   return data.data;
 }
+
+/** Изменяемые поля профиля сотрудника (все опциональны). */
+export interface ProfileEmployeeUpdate {
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+}
+
+/** PATCH /users/{id}/profile — обновление профиля. Эндпоинт принимает multipart:
+ *  поле `form` со строкой JSON (текущий пароль обязателен, новый пароль и данные
+ *  сотрудника опциональны) и опциональный файл `photo`. */
+export async function updateProfile(
+  id: number,
+  password: string,
+  changes: { newPassword?: string; employee?: ProfileEmployeeUpdate },
+  photo?: File | null,
+): Promise<void> {
+  const payload: Record<string, unknown> = { password };
+  if (changes.newPassword) payload.new_password = changes.newPassword;
+  if (changes.employee) payload.employee_data = changes.employee;
+  const form = new FormData();
+  form.append("form", JSON.stringify(payload));
+  if (photo) {
+    form.append("photo", photo);
+  }
+  await api.patch(`/users/${id}/profile`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
