@@ -387,3 +387,9 @@ export async function updateProfile(
 export async function updateUserRole(id: number, roleId: number): Promise<void> {
   await api.post(`/users/${id}/role`, { role_id: roleId });
 }
+
+/** DELETE /user/{id} — удалить аккаунт. Требуется пароль удаляемого аккаунта
+ *  (или права администратора). */
+export async function deleteAccount(id: number, password: string): Promise<void> {
+  await api.delete(`/user/${id}`, { data: { password } });
+}
