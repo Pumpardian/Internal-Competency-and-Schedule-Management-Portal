@@ -344,3 +344,11 @@ export async function getRole(id: number): Promise<ApiRole> {
   const { data } = await api.get<ApiRole>(`/users/${id}/role`);
   return data;
 }
+
+/** GET /roles — список ролей (для выбора при смене роли пользователя). */
+export async function fetchRoles(): Promise<ApiRole[]> {
+  const { data } = await api.get<ApiPage<ApiRole>>("/roles", {
+    params: { current_page: 1, page_size: 20 },
+  });
+  return data.data;
+}
