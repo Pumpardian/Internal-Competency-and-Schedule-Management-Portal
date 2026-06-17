@@ -1,3 +1,6 @@
+# Загруженные файлы (фото сотрудников) — создаются в рантайме
+backend/static/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
