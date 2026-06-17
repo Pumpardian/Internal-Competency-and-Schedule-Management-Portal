@@ -29,6 +29,9 @@ export function Header({ page, setPage, user, setUser }: HeaderProps) {
         <button className={page === "room" ? "active" : ""} onClick={() => setPage("room")}>
           Переговорная
         </button>
+        <button className={page === "profile" ? "active" : ""} onClick={() => setPage("profile")}>
+          Профиль
+        </button>
       </nav>
       <div className="user">
         <span>X-User-Id:</span>
