@@ -332,3 +332,24 @@ body {
   max-width: 1120px; margin: 0 auto 24px; padding: 10px 20px;
   color: var(--muted); font-size: 12px;
 }
+
+/* ---------- Аватары в матрице ---------- */
+.emp-ident { display: flex; align-items: center; gap: 10px; }
+.emp-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  flex: none; object-fit: cover; border: 1px solid #eee;
+}
+.emp-avatar--initials {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--primary); color: #fff;
+  font-size: 13px; font-weight: 600;
+}
+
+/* ---------- Аккаунт ---------- */
+.account-form { display: flex; flex-direction: column; gap: 14px; max-width: 420px; }
+.account-row { display: flex; align-items: center; gap: 10px; }
+.account-label { color: var(--muted); font-size: 13px; min-width: 80px; }
+.account-value { font-weight: 600; }
+.account-note { color: var(--muted); font-size: 13px; }
+.account-danger { display: flex; flex-direction: column; gap: 14px; max-width: 420px; border: 1px solid #f3c2c2; }
+.account-danger .profile-section-title { color: var(--danger); }
