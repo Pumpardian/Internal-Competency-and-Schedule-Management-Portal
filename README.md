@@ -63,7 +63,8 @@ docker compose -f docker-compose-dev.yaml up -d
 docker compose -f docker-compose-dev.yaml ps         # все контейнеры Up, postgres — healthy
 ```
 
-Откройте **http://localhost** (Swagger — **http://localhost/docs**).
+Откройте **http://localhost**. Документация API: Swagger — **http://localhost/docs**,
+ReDoc — **http://localhost/redoc**.
 
 Миграции применяются автоматически при старте backend. Учётная запись
 администратора `admin` / `admin` создаётся при первом запуске.
@@ -83,6 +84,19 @@ docker compose -f docker-compose-dev.yaml exec backend python seed_demo.py
 остальные - user.
 
 > seed очищает прежние демо-данные и учётки (кроме системного `admin`).
+
+## Отчётность
+
+Модуль аналитики строит по данным БД графики (топ востребованных навыков и
+загрузка переговорной по дням недели) и сохраняет их в `backend/reports/`
+в PDF и PNG. Запуск внутри контейнера backend:
+
+```bash
+docker compose -f docker-compose-dev.yaml exec backend python -m report_module.run_report
+```
+
+Отчёты считаются по текущим данным, поэтому сначала имеет смысл наполнить БД
+демо-данными (см. выше).
 
 ## Запуск (prod)
 
