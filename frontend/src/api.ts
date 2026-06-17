@@ -79,10 +79,18 @@ export interface Page<T> {
   totalPages: number;
 }
 
+/** Событие, по которому приложение возвращает пользователя на экран входа. */
+export const AUTH_UNAUTHORIZED_EVENT = "auth:unauthorized";
+
 /** Переводим ошибки axios в обычные Error с текстом из поля detail сервера. */
 api.interceptors.response.use(
   (res) => res, // успешный ответ пропускаем как есть
   (err) => {
+    // Истёкший/невалидный токен: чистим его и сигналим приложению о выходе.
+    if (err.response?.status === 401) {
+      clearToken();
+      window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
+    }
     const detail = err.response?.data?.detail;
     const status = err.response ? `${err.response.status} ${err.response.statusText}` : err.message;
     throw new Error(detail ? String(detail) : status);
