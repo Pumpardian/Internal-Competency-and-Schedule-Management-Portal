@@ -8,6 +8,7 @@ from math import ceil
 
 from models import Role
 from dependencies import get_db
+from utils.auth import user_dependency
 
 router = APIRouter()
 
@@ -33,9 +34,9 @@ class RoleResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class DeleteRoleResponse(BaseModel):
-    """Модель ответа при удалении роли"""
-    message: str = Field(..., description="Сообщение об операции", examples=["Роль был успешно удалена"])
+# class DeleteRoleResponse(BaseModel):
+#     """Модель ответа при удалении роли"""
+#     message: str = Field(..., description="Сообщение об операции", examples=["Роль был успешно удалена"])
 
 class PagenatedRoleResponse(BaseModel):
     """Страничная модель ответа с данными ролей"""
@@ -59,6 +60,7 @@ class PagenatedRoleResponse(BaseModel):
     }
 )
 def get_roles(
+    user: user_dependency,
     current_page: int = Query(default=1, description="Номер текущей страницы", examples=[2], ge=1),
     page_size: int = Query(default=10, description="Размер страницы (1-20)", examples=[10], ge=1, le=20),
     db: Session = Depends(get_db)
@@ -100,6 +102,7 @@ def get_roles(
     }
 )
 def get_role(
+    user: user_dependency,
     id: int = Path(..., description="Уникальный идентификатор роли", ge=1, examples=[1]),
     db: Session = Depends(get_db)
 ):
@@ -122,136 +125,136 @@ def get_role(
     return role
 
 
-@router.post(
-    "/roles", 
-    response_class=JSONResponse, 
-    status_code=201,
-    response_model=RoleResponse,
-    summary="Добавить новую роль",
-    responses={
-        201: {"description": "Роль создана", "model": RoleResponse},
-        400: {"description": "Неверные данные"},
-        409: {"description": "Роль уже существует"},
-    }
-)
-def add_role(
-    role_data: RoleCreateOrUpdate = Body(...),
-    db: Session = Depends(get_db)
-):
-    '''
-    Добавление новой роли.
+# @router.post(
+#     "/roles", 
+#     response_class=JSONResponse, 
+#     status_code=201,
+#     response_model=RoleResponse,
+#     summary="Добавить новую роль",
+#     responses={
+#         201: {"description": "Роль создана", "model": RoleResponse},
+#         400: {"description": "Неверные данные"},
+#         409: {"description": "Роль уже существует"},
+#     }
+# )
+# def add_role(
+#     role_data: RoleCreateOrUpdate = Body(...),
+#     db: Session = Depends(get_db)
+# ):
+#     '''
+#     Добавление новой роли.
 
-    Тело запроса:
-    - **name**: Название роли **[string]** (обязательно, 1-100 символов).
+#     Тело запроса:
+#     - **name**: Название роли **[string]** (обязательно, 1-100 символов).
 
-    Возвращает созданную роль с присвоенным уникальным идентификатором.
-    '''
+#     Возвращает созданную роль с присвоенным уникальным идентификатором.
+#     '''
     
-    statement = select(Role).where(Role.name == role_data.name)
-    existing = db.execute(statement).scalar_one_or_none()
-    if existing:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Роль '{role_data.name}' уже существует"
-        )
+#     statement = select(Role).where(Role.name == role_data.name)
+#     existing = db.execute(statement).scalar_one_or_none()
+#     if existing:
+#         raise HTTPException(
+#             status_code=409,
+#             detail=f"Роль '{role_data.name}' уже существует"
+#         )
     
-    role = Role(
-        name=role_data.name
-    )
-    db.add(role)
-    db.commit()
-    db.refresh(role)
-    return role
-
-
-@router.patch(
-    "/roles/{id}",
-    response_class=JSONResponse,
-    response_model=RoleResponse,
-    summary="Обновить роль",
-    responses={
-        200: {"description": "Роль обновлена", "model": RoleResponse},
-        400: {"description": "Неверные данные"},
-        404: {"description": "Роль не найдена"},
-        409: {"description": "Роль уже существует"},
-    }
-)
-def update_role(
-    id: int = Path(..., description="Уникальный идентификатор роли", ge=1, examples=[1]),
-    role_data: RoleCreateOrUpdate = Body(...),
-    db: Session = Depends(get_db)
-):
-    '''
-    Обновление указанной роли.
-    
-    Путь запроса:
-    - **id**: Уникальный идентификатор роли **[int]**.
-
-    Тело запроса
-    - **name**: Новое название роли **[string]**.
-    
-    Возвращает роль с обновленными данными.
-    '''
-    
-    statement = select(Role).where(Role.id == id)
-    role = db.execute(statement).scalar_one_or_none()
-    if not role:
-        raise HTTPException(
-            status_code=404,
-            detail="Роль не найдена"
-        )
-    
-    if role_data.name is not None:
-        statement = select(Role).where(
-            and_(
-                Role.name == Role.name,
-                Role.id != id
-            )
-        )
-        existing = db.execute(statement).scalar_one_or_none()
-        if existing:
-            raise HTTPException(
-                status_code=409,
-                detail=f"Роль '{role_data.name}' уже существует"
-            )
-        role.name = role_data.name
-    
-    db.commit()
-    db.refresh(role)
-    return role
+#     role = Role(
+#         name=role_data.name
+#     )
+#     db.add(role)
+#     db.commit()
+#     db.refresh(role)
+#     return role
 
 
-@router.delete(
-    "/roles/{id}", 
-    response_class=JSONResponse,
-    response_model=DeleteRoleResponse,
-    summary="Удалить роль",
-    responses={
-        200: {"description": "Роль удалена", "model": DeleteRoleResponse},
-        404: {"description": "Роль не найдена"},
-    }
-)
-def delete_role(
-    id: int = Path(..., description="Уникальный идентификатор роли", ge=1, examples=[1]),
-    db: Session = Depends(get_db)
-):
-    '''
-    Удаляет роль с указанным уникальным идентификатором.
+# @router.patch(
+#     "/roles/{id}",
+#     response_class=JSONResponse,
+#     response_model=RoleResponse,
+#     summary="Обновить роль",
+#     responses={
+#         200: {"description": "Роль обновлена", "model": RoleResponse},
+#         400: {"description": "Неверные данные"},
+#         404: {"description": "Роль не найдена"},
+#         409: {"description": "Роль уже существует"},
+#     }
+# )
+# def update_role(
+#     id: int = Path(..., description="Уникальный идентификатор роли", ge=1, examples=[1]),
+#     role_data: RoleCreateOrUpdate = Body(...),
+#     db: Session = Depends(get_db)
+# ):
+#     '''
+#     Обновление указанной роли.
     
-    Путь запроса:
-    - **id**: Уникальный идентификатор роли **[int]**.
+#     Путь запроса:
+#     - **id**: Уникальный идентификатор роли **[int]**.
+
+#     Тело запроса
+#     - **name**: Новое название роли **[string]**.
+    
+#     Возвращает роль с обновленными данными.
+#     '''
+    
+#     statement = select(Role).where(Role.id == id)
+#     role = db.execute(statement).scalar_one_or_none()
+#     if not role:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="Роль не найдена"
+#         )
+    
+#     if role_data.name is not None:
+#         statement = select(Role).where(
+#             and_(
+#                 Role.name == Role.name,
+#                 Role.id != id
+#             )
+#         )
+#         existing = db.execute(statement).scalar_one_or_none()
+#         if existing:
+#             raise HTTPException(
+#                 status_code=409,
+#                 detail=f"Роль '{role_data.name}' уже существует"
+#             )
+#         role.name = role_data.name
+    
+#     db.commit()
+#     db.refresh(role)
+#     return role
+
+
+# @router.delete(
+#     "/roles/{id}", 
+#     response_class=JSONResponse,
+#     response_model=DeleteRoleResponse,
+#     summary="Удалить роль",
+#     responses={
+#         200: {"description": "Роль удалена", "model": DeleteRoleResponse},
+#         404: {"description": "Роль не найдена"},
+#     }
+# )
+# def delete_role(
+#     id: int = Path(..., description="Уникальный идентификатор роли", ge=1, examples=[1]),
+#     db: Session = Depends(get_db)
+# ):
+#     '''
+#     Удаляет роль с указанным уникальным идентификатором.
+    
+#     Путь запроса:
+#     - **id**: Уникальный идентификатор роли **[int]**.
         
-    Возвращает сообщение об успешном удалении роли.
-    '''
+#     Возвращает сообщение об успешном удалении роли.
+#     '''
 
-    statement = select(Role).where(Role.id == id)
-    role = db.execute(statement).scalar_one_or_none()
-    if not role:
-        raise HTTPException(
-            status_code=404,
-            detail="Роль не найден"
-        )
+#     statement = select(Role).where(Role.id == id)
+#     role = db.execute(statement).scalar_one_or_none()
+#     if not role:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="Роль не найден"
+#         )
     
-    db.delete(role)
-    db.commit()
-    return {"message": "Роль была успешно удалена"}
+#     db.delete(role)
+#     db.commit()
+#     return {"message": "Роль была успешно удалена"}
