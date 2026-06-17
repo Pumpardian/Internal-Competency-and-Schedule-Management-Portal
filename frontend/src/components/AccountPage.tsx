@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import {
   currentUser,
+  deleteAccount,
   fetchRoles,
   getProfile,
   getRole,
@@ -20,6 +21,8 @@ import type { Employee, ToastInput } from "../types";
 interface AccountPageProps {
   /** Показ всплывающего уведомления. */
   push: (t: ToastInput) => void;
+  /** Выход из системы (после удаления аккаунта). */
+  onLogout: () => void;
 }
 
 /** Извлекает текст ошибки из произвольного исключения. */
@@ -28,7 +31,7 @@ function errMessage(e: unknown): string {
 }
 
 /** Страница управления собственным аккаунтом. */
-export function AccountPage({ push }: AccountPageProps) {
+export function AccountPage({ push, onLogout }: AccountPageProps) {
   const me = currentUser();
   // Профиль сотрудника текущего пользователя (или null, если его нет).
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -50,6 +53,10 @@ export function AccountPage({ push }: AccountPageProps) {
   const [targetUserId, setTargetUserId] = useState("");
   const [targetRoleId, setTargetRoleId] = useState<number | "">("");
   const [changingRole, setChangingRole] = useState(false);
+
+  // Удаление аккаунта.
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const myId = me?.id;
   const isAdmin = role?.name === "admin";
@@ -147,6 +154,22 @@ export function AccountPage({ push }: AccountPageProps) {
       push({ type: "error", title: "Ошибка", msg: errMessage(err) });
     } finally {
       setChangingRole(false);
+    }
+  };
+
+  /** Удаление собственного аккаунта (с подтверждением паролем). */
+  const handleDelete = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (myId === undefined) return;
+    setDeleting(true);
+    try {
+      await deleteAccount(myId, deletePassword);
+      push({ title: "Аккаунт удалён", msg: "До свидания!" });
+      onLogout();
+    } catch (err) {
+      push({ type: "error", title: "Ошибка", msg: errMessage(err) });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -289,6 +312,30 @@ export function AccountPage({ push }: AccountPageProps) {
             disabled={changingRole || !targetUserId || targetRoleId === ""}
           >
             {changingRole ? "Применение…" : "Сменить роль"}
+          </button>
+        </form>
+      )}
+
+      {/* Удаление аккаунта — необратимое действие, требует пароль. */}
+      {!loading && !error && (
+        <form className="card account-danger" style={{ marginTop: 16 }} onSubmit={handleDelete}>
+          <div className="profile-section-title">Удаление аккаунта</div>
+          <div className="account-note">
+            Действие необратимо: аккаунт и связанный профиль будут удалены.
+          </div>
+          <label className="auth-field">
+            <span>Текущий пароль</span>
+            <input
+              className="input"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Введите пароль для подтверждения"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+            />
+          </label>
+          <button className="btn danger" type="submit" disabled={deleting || !deletePassword}>
+            {deleting ? "Удаление…" : "Удалить аккаунт"}
           </button>
         </form>
       )}
