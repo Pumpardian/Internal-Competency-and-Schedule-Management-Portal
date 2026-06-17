@@ -141,6 +141,14 @@ function errMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+/** Инициалы для аватара-заглушки, напр. «Петров Сергей» → «ПС». */
+function initials(emp: Employee): string {
+  return [emp.lastName, emp.firstName]
+    .map((part) => part.trim()[0] ?? "")
+    .join("")
+    .toUpperCase();
+}
+
 /** Постраничная навигация «‹ N / M ›». Скрывается, если страница всего одна. */
 function Pager({
   label,
@@ -398,9 +406,16 @@ export function TeamPage({
                 <tr key={emp.id}>
                   <td className="emp">
                     <div className="emp-row">
-                      <div>
-                        <div className="name">{emp.name}</div>
-                        <div className="pos">{emp.position}</div>
+                      <div className="emp-ident">
+                        {emp.photoUrl ? (
+                          <img className="emp-avatar" src={emp.photoUrl} alt={emp.name} />
+                        ) : (
+                          <div className="emp-avatar emp-avatar--initials">{initials(emp)}</div>
+                        )}
+                        <div>
+                          <div className="name">{emp.name}</div>
+                          <div className="pos">{emp.position}</div>
+                        </div>
                       </div>
                       <div className="hdr-actions">
                         <button
