@@ -383,9 +383,10 @@ export async function updateProfile(
 }
 
 /** POST /users/{id}/role — сменить роль пользователя (нужно право
- *  user_role.update; есть у роли admin). */
+ *  user_role.update; есть у роли admin). Эндпоинт ждёт role_id сырым числом в
+ *  теле (Body без embed), а не объектом. */
 export async function updateUserRole(id: number, roleId: number): Promise<void> {
-  await api.post(`/users/${id}/role`, { role_id: roleId });
+  await api.post(`/users/${id}/role`, roleId);
 }
 
 /** DELETE /user/{id} — удалить аккаунт. Требуется пароль удаляемого аккаунта
