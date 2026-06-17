@@ -26,7 +26,7 @@ def get_skills_in_demand(db: Session, limit: int = 5) -> pd.DataFrame:
         func.count(EmployeeSkill.employee_id).label("employee_count"))
             .join(EmployeeSkill, Skill.id == EmployeeSkill.skill_id)
             .group_by(Skill.id, Skill.name, Skill.category)
-    ).scalars().all()
+    ).all()
     
     df = pd.DataFrame(skills, columns=["skill_name", "category", "employee_count"])
     df_top = (df
@@ -48,7 +48,7 @@ def get_average_meeting_room_occupancy(db: Session) -> pd.DataFrame:
         func.sum(func.extract('epoch', Booking.end_time - Booking.start_time) / 3600).label("occupation_time"))
             .group_by(extract('dow', Booking.start_time), func.date(Booking.start_time))
             .order_by(func.date(Booking.start_time).desc())
-    ).scalars().all()
+    ).all()
 
     df = pd.DataFrame(daily_bookings, columns=[
             'weekday', 'booking_date', 'bookings_count', 'occupation_time'
@@ -60,12 +60,20 @@ def get_average_meeting_room_occupancy(db: Session) -> pd.DataFrame:
             }
     df['weekday_name'] = df['weekday'].map(weekdays)
 
-    weekday_stats = df.groupby(['weekday', 'weekday_name']).agg({
+    weekday_stats = df.groupby(['weekday', 'weekday_name'], as_index=False).agg({
             'booking_date': 'count',
             'bookings_count': 'sum',
             'occupation_time': ['mean']
         }).round(2)
     
+    weekday_stats.columns = [
+        'weekday', 
+        'weekday_name', 
+        'days_with_bookings', 
+        'total_bookings', 
+        'avg_occupation_hours'
+    ]
+
     return weekday_stats
 
 
@@ -140,13 +148,20 @@ def visualize_meeting_room_data(meeting_room_stats: pd.DataFrame) -> plt.Figure:
         plt.tight_layout()
         return fig
 
-    #Извлечение данных
+    # Извлечение данных
     df_plot = meeting_room_stats.copy()
-    df_plot.columns = ['_'.join(col).strip() if isinstance(col, tuple) else col
-                       for col in df_plot.columns.values]
     
-    # Проверка наличия колонки
-    if 'occupation_time_mean' not in df_plot.columns:
+    # Проверка наличия колонки с названием дня недели
+    if 'weekday_name' not in df_plot.columns:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.text(0.5, 0.5, 'Нет данных по дням недели', 
+                ha='center', va='center', fontsize=16)
+        ax.set_title('Загрузка переговорной', fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        return fig
+    
+    # Проверка наличия колонки со средним временем
+    if 'avg_occupation_hours' not in df_plot.columns:
         fig, ax = plt.subplots(figsize=(10, 6))
         ax.text(0.5, 0.5, 'Нет данных по загрузке', 
                 ha='center', va='center', fontsize=16)
@@ -154,29 +169,29 @@ def visualize_meeting_room_data(meeting_room_stats: pd.DataFrame) -> plt.Figure:
         plt.tight_layout()
         return fig
 
-    #Сорт по дням
+    # Сортировка по дням недели
     day_order = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
     df_plot['weekday_name'] = pd.Categorical(df_plot['weekday_name'], categories=day_order, ordered=True)
     df_plot = df_plot.sort_values('weekday_name')
 
-    #Создание граика
+    # Создание графика
     fig, ax = plt.subplots(figsize=(10, 6))
     bars = ax.bar(
         df_plot['weekday_name'], 
-        df_plot['occupation_time_mean'],
+        df_plot['avg_occupation_hours'],
         color=sns.color_palette("viridis", len(df_plot)),
         edgecolor='black',
         linewidth=1
     )
 
-    #Настройка графика
+    # Настройка графика
     ax.set_title('Средняя загрузка переговорной по дням недели', fontsize=14, fontweight='bold')
     ax.set_xlabel('День недели', fontsize=12)
     ax.set_ylabel('Среднее время занятости (часы)', fontsize=12)
     ax.grid(axis='y', alpha=0.3, linestyle='--')
 
-    #Подписываем значения на столбцах
-    for bar, value in zip(bars, df_plot['occupation_time_mean']):
+    # Подписываем значения на столбцах
+    for bar, value in zip(bars, df_plot['avg_occupation_hours']):
         ax.text(
             bar.get_x() + bar.get_width()/2., 
             bar.get_height() + 0.1,
