@@ -159,13 +159,18 @@ export async function patchSkillLevel(empId: number, skillId: number, level: num
   await api.patch(`/employees/${empId}/skills/${skillId}`, { level });
 }
 
-/** POST /employees — создать сотрудника. */
+/** POST /employees — создать сотрудника. Эндпоинт принимает multipart: поле
+ *  `form` со строкой JSON и опциональное фото (здесь без фото). */
 export async function createEmployee(
   first_name: string,
   last_name: string,
   position?: string,
 ): Promise<void> {
-  await api.post("/employees", { first_name, last_name, position });
+  const form = new FormData();
+  form.append("form", JSON.stringify({ first_name, last_name, position }));
+  await api.post("/employees", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 }
 
 /** POST /skills — создать навык. */
@@ -173,12 +178,17 @@ export async function createSkill(name: string, category: string): Promise<void>
   await api.post("/skills", { name, category });
 }
 
-/** PATCH /employees/{id} — обновить данные сотрудника (поля опциональны). */
+/** PATCH /employees/{id} — обновить данные сотрудника (поля опциональны).
+ *  Эндпоинт принимает multipart: поле `form` со строкой JSON и опциональное фото. */
 export async function updateEmployee(
   id: number,
   fields: { first_name?: string; last_name?: string; position?: string },
 ): Promise<void> {
-  await api.patch(`/employees/${id}`, fields);
+  const form = new FormData();
+  form.append("form", JSON.stringify(fields));
+  await api.patch(`/employees/${id}`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 }
 
 /** DELETE /employees/{id} — удалить сотрудника. */
