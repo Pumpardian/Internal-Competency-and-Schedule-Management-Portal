@@ -92,7 +92,8 @@ docker compose -f docker-compose-dev.yaml exec backend python seed_demo.py
 в PDF и PNG. Запуск внутри контейнера backend:
 
 ```bash
-docker compose -f docker-compose-dev.yaml exec backend python -m report_module.run_report
+docker exec -it fastapi-backend-dev bash
+python -m report_module.run_report
 ```
 
 Отчёты считаются по текущим данным, поэтому сначала имеет смысл наполнить БД
