@@ -351,5 +351,8 @@ body {
 .account-label { color: var(--muted); font-size: 13px; min-width: 80px; }
 .account-value { font-weight: 600; }
 .account-note { color: var(--muted); font-size: 13px; }
+.account-photo { display: flex; align-items: center; gap: 12px; }
+.account-photo .emp-avatar { width: 56px; height: 56px; font-size: 18px; }
+.account-photo .input { flex: 1; }
 .account-danger { display: flex; flex-direction: column; gap: 14px; max-width: 420px; border: 1px solid #f3c2c2; }
 .account-danger .profile-section-title { color: var(--danger); }

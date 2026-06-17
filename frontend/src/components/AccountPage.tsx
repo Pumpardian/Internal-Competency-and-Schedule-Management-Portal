@@ -5,7 +5,7 @@
  * фото), позволяет сменить пароль. Все изменения подтверждаются текущим паролем
  * через PATCH /users/{id}/profile. Пользователь определяется по JWT.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   currentUser,
   deleteAccount,
@@ -28,6 +28,11 @@ interface AccountPageProps {
 /** Извлекает текст ошибки из произвольного исключения. */
 function errMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+/** Инициалы для аватара-заглушки, напр. «Иванов Иван» → «ИИ». */
+function initials(first: string, last: string): string {
+  return [last, first].map((p) => p.trim()[0] ?? "").join("").toUpperCase();
 }
 
 /** Страница управления собственным аккаунтом. */
@@ -60,6 +65,16 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
 
   const myId = me?.id;
   const isAdmin = role?.name === "admin";
+
+  // Превью аватара: только что выбранный файл, иначе текущее сохранённое фото.
+  const photoPreview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
+  useEffect(
+    () => () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+    },
+    [photoPreview],
+  );
+  const avatarSrc = photoPreview ?? employee?.photoUrl ?? null;
 
   // Загрузка профиля при открытии страницы.
   useEffect(() => {
@@ -228,12 +243,21 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
               </label>
               <label className="auth-field">
                 <span>Фото</span>
-                <input
-                  className="input"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
-                />
+                <div className="account-photo">
+                  {avatarSrc ? (
+                    <img className="emp-avatar" src={avatarSrc} alt="Фото профиля" />
+                  ) : (
+                    <div className="emp-avatar emp-avatar--initials">
+                      {initials(firstName, lastName)}
+                    </div>
+                  )}
+                  <input
+                    className="input"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+                  />
+                </div>
               </label>
             </>
           ) : (
