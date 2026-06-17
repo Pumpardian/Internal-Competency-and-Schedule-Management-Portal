@@ -6,9 +6,9 @@ from datetime import datetime, date, timedelta
 from pydantic import BaseModel, Field, field_validator
 from typing import List
 
-from models import Booking
+from models import Booking, User
 from dependencies import get_db
-from utils.auth import user_dependency, require_permission
+from utils.auth import user_dependency, require_permission, get_current_user, check_user_permission
 
 router = APIRouter()
 
@@ -97,8 +97,9 @@ def get_bookings(
     }
 )
 def create_booking(
+    request: Request,
     booking_data: BookingCreate,
-    user: dict = Depends(require_permission("booking.create")),
+    user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     '''
@@ -113,6 +114,16 @@ def create_booking(
     Возвращает созданную бронь с присвоенным уникальным идентификатором.
     '''
     
+    statement = select(User).where(User.id == user["id"])
+    user: User = db.execute(statement).scalar_one_or_none()
+
+    if (not user.employee or not user.employee.id == booking_data.employee_id) \
+    and not check_user_permission(db, user.id, "booking.create", request.app.state.admin_role_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Недостаточно прав для создания брони за других"
+        )
+
     statement = select(Booking).where(
         and_(
             Booking.start_time < booking_data.end_time,
@@ -152,7 +163,8 @@ def create_booking(
     }
 )
 def delete_booking(
-    user: dict = Depends(require_permission("booking.delete")),
+    request: Request,
+    user: dict = Depends(get_current_user),
     id: int = Path(..., description="Уникальный идентификатор брони", ge=1, examples=[1]),
     db: Session = Depends(get_db)
 ):
@@ -165,12 +177,22 @@ def delete_booking(
     Возвращает сообщение об успешном удалении брони.
     '''
 
+    statement = select(User).where(User.id == user["id"])
+    user: User = db.execute(statement).scalar_one_or_none()
+
     statement = select(Booking).where(Booking.id == id)
     booking = db.execute(statement).scalar_one_or_none()
     if not booking:
         raise HTTPException(
             status_code=404,
             detail="Бронь не найдена"
+        )
+    
+    if (not user.employee or not user.employee.id == booking.employee_id) \
+    and not check_user_permission(db, user.id, "booking.delete", request.app.state.admin_role_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Недостаточно прав для удаления брони за других"
         )
     
     db.delete(booking)
