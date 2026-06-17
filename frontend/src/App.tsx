@@ -1,81 +1,42 @@
 /**
  * Корневой компонент портала.
  *
- * Матрицу компетенций (сотрудники, навыки, уровни) загружает с бэкенда через
- * хук useCompetency и передаёт на страницу «Команда и навыки». Брони
- * переговорной грузит страница RoomPage через хук useBookings (тоже с бэкенда).
+ * Управляет авторизацией: пока нет JWT — показывает страницы входа/регистрации,
+ * после входа монтирует портал (Portal). Запросы к защищённым данным уходят
+ * только из Portal, поэтому до авторизации лишних 401 не возникает.
  */
-import { useState } from "react";
-import { Header } from "./components/Header";
-import { RoomPage } from "./components/RoomPage";
-import { TeamPage } from "./components/TeamPage";
-import { Toasts } from "./components/Toasts";
-import { useCompetency } from "./hooks/useCompetency";
-import { useToasts } from "./hooks/useToasts";
-import type { Page } from "./types";
+import { useEffect, useState } from "react";
+import { AUTH_UNAUTHORIZED_EVENT, clearToken, getToken } from "./api";
+import { LoginPage } from "./components/LoginPage";
+import { RegisterPage } from "./components/RegisterPage";
+import { Portal } from "./components/Portal";
 
-/** Приложение: шапка, активная страница и слой уведомлений. */
+/** Приложение: гейт авторизации поверх портала. */
 export default function App() {
-  // Активная страница и выбранный пользователь (X-User-Id).
-  const [page, setPage] = useState<Page>("team");
-  const [user, setUser] = useState("admin");
-  // Матрица компетенций с бэкенда.
-  const {
-    employees,
-    skills,
-    levels,
-    loading,
-    error,
-    reload,
-    setLevel,
-    addEmployee,
-    addSkill,
-    editEmployee,
-    removeEmployee,
-    editSkill,
-    removeSkill,
-    removeSkillFromEmployee,
-    employeePage,
-    employeeTotalPages,
-    setEmployeePage,
-    skillPage,
-    skillTotalPages,
-    setSkillPage,
-  } = useCompetency();
-  const { toasts, push } = useToasts();
+  // Признак авторизации (есть ли сохранённый токен).
+  const [authed, setAuthed] = useState(() => !!getToken());
+  // Активная страница гейта, когда пользователь не авторизован.
+  const [authPage, setAuthPage] = useState<"login" | "register">("login");
 
-  return (
-    <>
-      <Header page={page} setPage={setPage} user={user} setUser={setUser} />
-      {/* Простейший «роутинг» переключением по состоянию page. */}
-      {page === "team" ? (
-        <TeamPage
-          employees={employees}
-          skills={skills}
-          levels={levels}
-          loading={loading}
-          error={error}
-          onReload={reload}
-          onSetLevel={setLevel}
-          onAddEmployee={addEmployee}
-          onAddSkill={addSkill}
-          onEditEmployee={editEmployee}
-          onRemoveEmployee={removeEmployee}
-          onEditSkill={editSkill}
-          onRemoveSkill={removeSkill}
-          onRemoveSkillFromEmployee={removeSkillFromEmployee}
-          employeePage={employeePage}
-          employeeTotalPages={employeeTotalPages}
-          onEmployeePage={setEmployeePage}
-          skillPage={skillPage}
-          skillTotalPages={skillTotalPages}
-          onSkillPage={setSkillPage}
-          push={push}
-        />
-      ) : (
-        <RoomPage employees={employees} push={push} />
-      )}
-      <Toasts toasts={toasts} />
-    </>
-  );
+  // Истёкший/невалидный токен (событие из api.ts) возвращает на экран входа.
+  useEffect(() => {
+    const onUnauthorized = () => setAuthed(false);
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, onUnauthorized);
+    return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, onUnauthorized);
+  }, []);
+
+  if (!authed) {
+    return authPage === "login" ? (
+      <LoginPage onSuccess={() => setAuthed(true)} onRegister={() => setAuthPage("register")} />
+    ) : (
+      <RegisterPage onSuccess={() => setAuthPage("login")} onLogin={() => setAuthPage("login")} />
+    );
+  }
+
+  const handleLogout = () => {
+    clearToken();
+    setAuthed(false);
+  };
+
+  return <Portal onLogout={handleLogout} />;
 }

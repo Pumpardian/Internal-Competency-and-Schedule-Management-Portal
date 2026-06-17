@@ -1,54 +1,95 @@
 # -*- coding: utf-8 -*-
-"""Наполнение БД демо-данными через REST API бэкенда.
+"""Наполнение БД демо-данными.
 
-Создаёт 100 сотрудников и 100 навыков и случайным образом проставляет уровни
-владения — чтобы на фронте было видно постраничную навигацию (пагинацию) и по
-строкам (сотрудники), и по столбцам (навыки).
+Создаёт 100 сотрудников (каждый — с учётной записью и ролью), 100 навыков и
+случайные уровни владения, плюс демо-брони. Пользователи и сотрудники создаются
+напрямую в БД (чтобы сразу задать роль, хешировать пароль и связать сотрудника
+с учёткой); навыки, уровни и брони — через REST API (требуют токен).
+
+Роли: «Иванов Иван» — admin, каждый пятый — manager, остальные — user.
+Учётки: логин = транслит фамилии + индекс, пароль у всех общий (PASSWORD).
+
+Адрес API задаётся через SEED_API_BASE; по умолчанию — локальный бэкенд (удобно
+запускать в контейнере: docker exec fastapi-backend-dev python seed_demo.py).
 """
 import json
+import os
 import random
-import urllib.error
+import urllib.parse
 import urllib.request
+from datetime import datetime
 
-from sqlalchemy import text
+from sqlalchemy import select, text
 
 from database import SessionLocal
+from models import User, Employee, Role
+from utils.auth import argon2_context
 
 # Роутеры смонтированы под префиксом /api (см. backend/main.py).
-BASE = "http://127.0.0.1:8000/api"
+BASE = os.getenv("SEED_API_BASE", "http://localhost:8000/api")
+
+# Учётные данные администратора (создаются при старте бэкенда, см. init.py).
+ADMIN_USER = os.getenv("SEED_ADMIN_USER", "admin")
+ADMIN_PASSWORD = os.getenv("SEED_ADMIN_PASSWORD", "admin")
+
+# Общий пароль для всех демо-учёток сотрудников.
+PASSWORD = os.getenv("SEED_USER_PASSWORD", "password")
 
 # Воспроизводимость демо-набора.
 random.seed(42)
 
-# Сколько сотрудников и навыков создать.
 EMPLOYEE_COUNT = 100
 SKILL_COUNT = 100
-
-# Допустимые категории навыков (см. models.skill_categories).
 CATEGORIES = ["language", "database", "framework", "library", "tool", "other"]
 
+# Транслитерация кириллицы для логинов.
+TRANSLIT = {
+    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",
+    "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
+    "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
+    "ф": "f", "х": "h", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "sch",
+    "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+}
 
-def post(path, payload):
+
+def translit(s: str) -> str:
+    return "".join(TRANSLIT.get(ch, ch) for ch in s.lower())
+
+
+def login() -> str:
+    """Логинится администратором и возвращает JWT (эндпоинт ждёт форму OAuth2)."""
+    data = urllib.parse.urlencode({"username": ADMIN_USER, "password": ADMIN_PASSWORD}).encode("utf-8")
+    req = urllib.request.Request(
+        BASE + "/login", data=data,
+        headers={"Content-Type": "application/x-www-form-urlencoded"}, method="POST",
+    )
+    with urllib.request.urlopen(req) as r:
+        return json.loads(r.read().decode("utf-8"))["access_token"]
+
+
+def post(path, payload, token):
+    """POST с JSON-телом и токеном (навыки, уровни, брони)."""
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         BASE + path, data=data,
-        headers={"Content-Type": "application/json"}, method="POST",
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
+        method="POST",
     )
     with urllib.request.urlopen(req) as r:
         return json.loads(r.read().decode("utf-8"))
 
 
 def reset_tables():
-    """Очищает таблицы перед заливкой, чтобы не ловить 409 на уже существующих
-    записях и получить ровно по 100 сотрудников и навыков."""
+    """Очищает демо-данные и учётки сотрудников (кроме системного admin)."""
     with SessionLocal() as db:
         db.execute(text(
             'TRUNCATE "Bookings", employee_skills, skills, employees RESTART IDENTITY CASCADE'
         ))
+        db.execute(text("DELETE FROM users WHERE username != :admin"), {"admin": ADMIN_USER})
         db.commit()
 
 
-# --- Генерация сотрудников: уникальные пары «имя + фамилия» ------------------
+# --- Данные сотрудников: уникальные пары «имя + фамилия» ---------------------
 FIRST_NAMES = [
     "Иван", "Анна", "Пётр", "Мария", "Алексей", "Ольга", "Дмитрий", "Елена",
     "Сергей", "Наталья", "Андрей", "Татьяна", "Михаил", "Екатерина",
@@ -63,14 +104,52 @@ POSITIONS = [
     "UX-дизайнер", "Продакт-менеджер", "SRE-инженер",
 ]
 
-# Все уникальные пары (имя, фамилия), берём первые EMPLOYEE_COUNT.
 employee_pairs = [(f, l) for l in LAST_NAMES for f in FIRST_NAMES][:EMPLOYEE_COUNT]
 employees = [
     (f, l, POSITIONS[i % len(POSITIONS)])
     for i, (f, l) in enumerate(employee_pairs)
 ]
 
-# --- Генерация навыков: уникальные названия с валидной категорией -----------
+
+def role_for(index: int) -> str:
+    """Иванов Иван (первый) — admin, каждый пятый — manager, остальные — user."""
+    if index == 0:
+        return "admin"
+    if index % 5 == 0:
+        return "manager"
+    return "user"
+
+
+def create_users_and_employees() -> list[int]:
+    """Создаёт учётку + сотрудника для каждой записи и возвращает id сотрудников."""
+    emp_ids: list[int] = []
+    with SessionLocal() as db:
+        roles = {r.name: r.id for r in db.execute(select(Role)).scalars().all()}
+        password_hash = argon2_context.hash(PASSWORD)
+        used = set()
+        for i, (first, last, position) in enumerate(employees):
+            # Уникальный логин: транслит фамилии + порядковый номер.
+            username = f"{translit(last)}{i + 1}"
+            while username in used:
+                username += "x"
+            used.add(username)
+
+            user = User(username=username, hashed_password=password_hash, role_id=roles[role_for(i)])
+            db.add(user)
+            db.flush()
+
+            employee = Employee(
+                first_name=first, last_name=last, position=position,
+                created_at=datetime.now(), user_id=user.id,
+            )
+            db.add(employee)
+            db.flush()
+            emp_ids.append(employee.id)
+        db.commit()
+    return emp_ids
+
+
+# --- Навыки: уникальные названия с валидной категорией ----------------------
 BASE_SKILLS = [
     ("Python", "language"), ("TypeScript", "language"), ("JavaScript", "language"),
     ("SQL", "language"), ("Go", "language"), ("Rust", "language"), ("Java", "language"),
@@ -85,7 +164,6 @@ BASE_SKILLS = [
     ("Ansible", "tool"), ("Nginx", "tool"), ("Grafana", "tool"), ("Prometheus", "tool"),
     ("Kafka", "tool"), ("RabbitMQ", "tool"), ("Jenkins", "tool"), ("GitLab CI", "tool"),
 ]
-# Дополняем до SKILL_COUNT синтетическими, но уникальными названиями.
 skills = list(BASE_SKILLS)
 i = 1
 while len(skills) < SKILL_COUNT:
@@ -93,15 +171,17 @@ while len(skills) < SKILL_COUNT:
     i += 1
 skills = skills[:SKILL_COUNT]
 
-# --- Отправка на сервер -----------------------------------------------------
+# Отправка на сервер
+token = login()
+print("Авторизация: ок.")
+
 reset_tables()
 print("Таблицы очищены.")
 
-emp_ids = [post("/employees", {"first_name": f, "last_name": l, "position": p})["id"]
-           for (f, l, p) in employees]
-print(f"Сотрудники: создано {len(emp_ids)}")
+emp_ids = create_users_and_employees()
+print(f"Сотрудники и учётки: создано {len(emp_ids)} (Иванов Иван — admin, каждый 5-й — manager)")
 
-skill_ids = [post("/skills", {"name": n, "category": c})["id"] for (n, c) in skills]
+skill_ids = [post("/skills", {"name": n, "category": c}, token)["id"] for (n, c) in skills]
 print(f"Навыки: создано {len(skill_ids)}")
 
 # Каждому сотруднику случайный набор навыков (5–15) со случайным уровнем 1–5.
@@ -109,13 +189,11 @@ count = 0
 for eid in emp_ids:
     chosen = random.sample(skill_ids, k=random.randint(5, 15))
     for sid in chosen:
-        post(f"/employees/{eid}/skills/{sid}", {"level": random.randint(1, 5)})
+        post(f"/employees/{eid}/skills/{sid}", {"level": random.randint(1, 5)}, token)
         count += 1
 print(f"Назначений уровней: {count}")
 
-# --- Брони переговорной --------------------------------------------------
-# На дату по умолчанию календаря (RoomPage) и в его рабочий диапазон 9:00–18:00.
-# Время в UTC ("Z"), интервалы не пересекаются (на бэке стоит запрет пересечений).
+# Брони переговорной на дату по умолчанию календаря (RoomPage), 9:00–18:00 UTC.
 BOOK_DATE = "2026-06-08"
 bookings = [
     (0, "Дейли команды", "09:00", "09:30"),
@@ -131,6 +209,7 @@ for emp_index, topic, start, end in bookings:
         "topic": topic,
         "start_time": f"{BOOK_DATE}T{start}:00Z",
         "end_time": f"{BOOK_DATE}T{end}:00Z",
-    })
+    }, token)
 print(f"Броней: создано {len(bookings)} на {BOOK_DATE}")
-print("Готово.")
+print(f"Готово. Учётки сотрудников: логин = транслит фамилии + номер, пароль = {PASSWORD!r}.")
+print(f"Админ-сотрудник «Иванов Иван»: логин {translit(employees[0][1])}1 / {PASSWORD!r}.")

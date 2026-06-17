@@ -44,7 +44,7 @@ class UserRoleChangeResponse(BaseModel):
 
 class UserProfileUpdateRequest(BaseModel):
     password: str = Field(..., min_length=4, max_length=72, description="Пароль", examples=[1111])
-    new_password: str = Field(..., min_length=4, max_length=72, description="Новый пароль", examples=[2222])
+    new_password: Optional[str] = Field(None, min_length=4, max_length=72, description="Новый пароль", examples=[2222])
     employee_data: Optional[EmployeeUpdate] = None
 
 class UserProfileUpdateResponse(BaseModel):
@@ -475,10 +475,10 @@ async def update_user_profile(
 @router.get(
     "/users/{id}",
     response_class=JSONResponse,
-    response_model=EmployeeResponse,
+    response_model=Optional[EmployeeResponse],
     summary="Получить профиль пользователя",
     responses={
-        200: {"description": "Профиль изменен", "model": EmployeeResponse},
+        200: {"description": "Профиль пользователя (или null, если сотрудник не привязан)", "model": Optional[EmployeeResponse]},
         401: {"description": "Не авторизован"},
         404: {"description": "Пользователь не найден"},
         422: {"description": "Неверный формат уникального идентификатора"}
@@ -504,8 +504,6 @@ def get_user_profile(
             status_code=404,
             detail="Пользователь не найден"
         )
-    
-    if not user.employee:
-        return {"message": "Пользователь не имеет профиля сотрудника"}
 
+    # Может быть None, если к аккаунту не привязан сотрудник — это валидный ответ.
     return user.employee

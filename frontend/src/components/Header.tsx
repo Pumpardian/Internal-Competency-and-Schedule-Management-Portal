@@ -1,8 +1,7 @@
 /**
- * Шапка портала: бренд, навигация между страницами и выбор пользователя.
+ * Шапка портала: бренд, навигация между страницами и текущий пользователь.
  *
- * Селектор «X-User-Id» имитирует упрощённую идентификацию пользователя
- * (одноимённый заголовок запроса) — на её основе позже строится проверка прав.
+ * Показывает логин вошедшего пользователя (из JWT) и кнопку выхода.
  */
 import type { Page } from "../types";
 
@@ -11,14 +10,14 @@ interface HeaderProps {
   page: Page;
   /** Переключение страницы. */
   setPage: (page: Page) => void;
-  /** Текущий идентификатор пользователя (значение заголовка X-User-Id). */
-  user: string;
-  /** Смена пользователя. */
-  setUser: (user: string) => void;
+  /** Логин вошедшего пользователя. */
+  username: string;
+  /** Выход из системы. */
+  onLogout: () => void;
 }
 
-/** Верхняя панель с навигацией и переключателем пользователя. */
-export function Header({ page, setPage, user, setUser }: HeaderProps) {
+/** Верхняя панель с навигацией, именем пользователя и выходом. */
+export function Header({ page, setPage, username, onLogout }: HeaderProps) {
   return (
     <header className="header">
       <span className="brand">Портал Отдела цифровизации</span>
@@ -29,14 +28,18 @@ export function Header({ page, setPage, user, setUser }: HeaderProps) {
         <button className={page === "room" ? "active" : ""} onClick={() => setPage("room")}>
           Переговорная
         </button>
+        <button className={page === "profile" ? "active" : ""} onClick={() => setPage("profile")}>
+          Профиль
+        </button>
+        <button className={page === "account" ? "active" : ""} onClick={() => setPage("account")}>
+          Аккаунт
+        </button>
       </nav>
       <div className="user">
-        <span>X-User-Id:</span>
-        <select value={user} onChange={(e) => setUser(e.target.value)}>
-          <option value="admin">admin</option>
-          <option value="ivanov">ivanov</option>
-          <option value="petrova">petrova</option>
-        </select>
+        <span className="user-name">{username}</span>
+        <button className="btn" onClick={onLogout}>
+          Выйти
+        </button>
       </div>
     </header>
   );

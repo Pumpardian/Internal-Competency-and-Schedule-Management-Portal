@@ -99,10 +99,10 @@ def get_employee_skills(
 
 
 @router.post(
-    "/employees/{employee_id}/skills/{skill_id}", 
-    response_class=JSONResponse, 
+    "/employees/{employee_id}/skills/{skill_id}",
+    response_class=JSONResponse,
     status_code=201,
-    response_model=EmployeeSkillDetailResponse,
+    response_model=EmployeeSkillResponse,
     summary="Добавить навык сотруднику",
     responses={
         201: {"description": "Навык сотрудника создан", "model": EmployeeSkillResponse},

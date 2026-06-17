@@ -62,6 +62,7 @@ body {
   border-radius: 4px;
   padding: 3px 6px;
 }
+.header .user-name { color: #fff; font-weight: 600; }
 
 .page { max-width: 1120px; margin: 24px auto; padding: 0 20px; }
 .page h1 { font-size: 20px; margin: 0 0 4px; }
@@ -266,7 +267,92 @@ body {
 @keyframes slidein { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; background: #eef5ff; color: var(--primary); }
+
+/* ---------- Профиль ---------- */
+.profile-head { display: flex; align-items: center; gap: 20px; }
+.profile-avatar {
+  width: 72px; height: 72px; border-radius: 50%;
+  flex: none; object-fit: cover; border: 1px solid #eee;
+}
+.profile-avatar--initials {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--primary); color: #fff;
+  font-size: 26px; font-weight: 600;
+}
+.profile-info { display: flex; flex-direction: column; gap: 4px; }
+.profile-name { font-size: 20px; font-weight: 600; }
+.profile-pos { color: var(--muted); }
+.profile-meta { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.profile-since { font-size: 12px; color: var(--muted); }
+
+.profile-section-title { font-weight: 600; font-size: 15px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.profile-empty { color: var(--muted); }
+.profile-skills { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.profile-skill { display: flex; flex-direction: column; gap: 6px; }
+.profile-skill-head { display: flex; align-items: center; gap: 8px; }
+.profile-skill-name { font-weight: 600; }
+.profile-level { display: flex; align-items: center; gap: 10px; }
+.profile-level-val {
+  width: 24px; height: 24px; flex: none;
+  border-radius: 4px; border: 1px solid #eee;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13px;
+}
+.profile-level-bar { flex: 1; height: 8px; background: #eef0f2; border-radius: 4px; overflow: hidden; }
+.profile-level-fill { height: 100%; background: var(--primary); border-radius: 4px; }
+
+/* ---------- Авторизация ---------- */
+.auth-wrap { display: flex; justify-content: center; padding: 64px 20px; }
+.auth-card { width: 360px; display: flex; flex-direction: column; gap: 16px; }
+.auth-title { font-size: 20px; font-weight: 600; }
+.auth-subtitle { margin: -8px 0 0; color: var(--muted); font-size: 13px; }
+.auth-field { display: flex; flex-direction: column; gap: 6px; }
+.auth-field span { font-size: 13px; color: #444; }
+.auth-field .input { width: 100%; }
+.auth-submit { margin-top: 4px; }
+.auth-error {
+  color: var(--danger);
+  font-size: 13px;
+  background: #fff0f0;
+  border: 1px solid #f3c2c2;
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+.auth-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  align-self: center;
+}
+.auth-link:hover { text-decoration: underline; }
 .mock-note {
   max-width: 1120px; margin: 0 auto 24px; padding: 10px 20px;
   color: var(--muted); font-size: 12px;
 }
+
+/* ---------- Аватары в матрице ---------- */
+.emp-ident { display: flex; align-items: center; gap: 10px; }
+.emp-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  flex: none; object-fit: cover; border: 1px solid #eee;
+}
+.emp-avatar--initials {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--primary); color: #fff;
+  font-size: 13px; font-weight: 600;
+}
+
+/* ---------- Аккаунт ---------- */
+.account-form { display: flex; flex-direction: column; gap: 14px; max-width: 420px; }
+.account-row { display: flex; align-items: center; gap: 10px; }
+.account-label { color: var(--muted); font-size: 13px; min-width: 80px; }
+.account-value { font-weight: 600; }
+.account-note { color: var(--muted); font-size: 13px; }
+.account-photo { display: flex; align-items: center; gap: 12px; }
+.account-photo .emp-avatar { width: 56px; height: 56px; font-size: 18px; }
+.account-photo .input { flex: 1; }
+.account-danger { display: flex; flex-direction: column; gap: 14px; max-width: 420px; border: 1px solid #f3c2c2; }
+.account-danger .profile-section-title { color: var(--danger); }
