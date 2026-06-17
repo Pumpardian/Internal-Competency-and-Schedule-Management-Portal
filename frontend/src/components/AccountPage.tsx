@@ -6,7 +6,15 @@
  * через PATCH /users/{id}/profile. Пользователь определяется по JWT.
  */
 import { useEffect, useState } from "react";
-import { currentUser, getProfile, updateProfile } from "../api";
+import {
+  currentUser,
+  fetchRoles,
+  getProfile,
+  getRole,
+  updateProfile,
+  updateUserRole,
+  type ApiRole,
+} from "../api";
 import type { Employee, ToastInput } from "../types";
 
 interface AccountPageProps {
@@ -36,7 +44,15 @@ export function AccountPage({ push }: AccountPageProps) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Роль текущего пользователя и (для админа) управление ролями других.
+  const [role, setRole] = useState<ApiRole | null>(null);
+  const [roles, setRoles] = useState<ApiRole[]>([]);
+  const [targetUserId, setTargetUserId] = useState("");
+  const [targetRoleId, setTargetRoleId] = useState<number | "">("");
+  const [changingRole, setChangingRole] = useState(false);
+
   const myId = me?.id;
+  const isAdmin = role?.name === "admin";
 
   // Загрузка профиля при открытии страницы.
   useEffect(() => {
@@ -64,6 +80,30 @@ export function AccountPage({ push }: AccountPageProps) {
     };
   }, [myId]);
 
+  // Роль текущего пользователя (для отображения и проверки прав).
+  useEffect(() => {
+    if (myId === undefined) return;
+    let active = true;
+    getRole(myId)
+      .then((r) => active && setRole(r))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [myId]);
+
+  // Список ролей нужен только администратору — для выпадающего списка.
+  useEffect(() => {
+    if (!isAdmin) return;
+    let active = true;
+    fetchRoles()
+      .then((rs) => active && setRoles(rs))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [isAdmin]);
+
   /** Сохранение изменений профиля (с подтверждением текущим паролем). */
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +129,24 @@ export function AccountPage({ push }: AccountPageProps) {
       push({ type: "error", title: "Ошибка", msg: errMessage(err) });
     } finally {
       setSaving(false);
+    }
+  };
+
+  /** Смена роли указанного пользователя (только для администратора). */
+  const handleChangeRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const uid = Number(targetUserId);
+    if (!uid || targetRoleId === "") return;
+    setChangingRole(true);
+    try {
+      await updateUserRole(uid, Number(targetRoleId));
+      push({ title: "Роль изменена", msg: `Пользователь #${uid}` });
+      setTargetUserId("");
+      setTargetRoleId("");
+    } catch (err) {
+      push({ type: "error", title: "Ошибка", msg: errMessage(err) });
+    } finally {
+      setChangingRole(false);
     }
   };
 
@@ -182,6 +240,55 @@ export function AccountPage({ push }: AccountPageProps) {
 
           <button className="btn primary" type="submit" disabled={saving || !currentPassword}>
             {saving ? "Сохранение…" : "Сохранить изменения"}
+          </button>
+        </form>
+      )}
+
+      {!loading && !error && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div className="account-row">
+            <span className="account-label">Роль</span>
+            <span className="account-value">{role?.name ?? "—"}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Управление ролями доступно только администратору (право user_role.update). */}
+      {!loading && !error && isAdmin && (
+        <form className="card" style={{ marginTop: 16 }} onSubmit={handleChangeRole}>
+          <div className="profile-section-title">Смена роли пользователя</div>
+          <label className="auth-field">
+            <span>ID пользователя</span>
+            <input
+              className="input"
+              type="number"
+              min={1}
+              placeholder="Напр. 2"
+              value={targetUserId}
+              onChange={(e) => setTargetUserId(e.target.value)}
+            />
+          </label>
+          <label className="auth-field">
+            <span>Роль</span>
+            <select
+              className="input"
+              value={targetRoleId}
+              onChange={(e) => setTargetRoleId(e.target.value === "" ? "" : Number(e.target.value))}
+            >
+              <option value="">— выберите роль —</option>
+              {roles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            className="btn primary"
+            type="submit"
+            disabled={changingRole || !targetUserId || targetRoleId === ""}
+          >
+            {changingRole ? "Применение…" : "Сменить роль"}
           </button>
         </form>
       )}
