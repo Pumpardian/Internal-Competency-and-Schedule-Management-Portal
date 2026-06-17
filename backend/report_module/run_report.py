@@ -1,5 +1,5 @@
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, date
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
@@ -22,17 +22,15 @@ def get_skills_in_demand(db: Session, limit: int = 5) -> pd.DataFrame:
     """
     skills = db.execute(select(
         Skill.name,
-        Skill.category,
-        func.count(EmployeeSkill.employee_id).label("employee_count"))
+        Skill.category)
             .join(EmployeeSkill, Skill.id == EmployeeSkill.skill_id)
-            .group_by(Skill.id, Skill.name, Skill.category)
     ).all()
     
-    df = pd.DataFrame(skills, columns=["skill_name", "category", "employee_count"])
-    df_top = (df
-              .sort_values('employee_count', ascending=False)
-              .head(limit)
-              .reset_index(drop=True))
+    df = pd.DataFrame(skills, columns=["skill_name", "category"])
+
+    df_top = df.groupby(['skill_name', 'category'], as_index=False) \
+        .size().rename(columns={'size': 'employee_count'}) \
+        .sort_values('employee_count', ascending=False).head(limit).reset_index(drop=True)
     
     return df_top
 
@@ -41,37 +39,38 @@ def get_average_meeting_room_occupancy(db: Session) -> pd.DataFrame:
     """
     Расчёт средней загрузки переговорной по дням недели
     """
-    daily_bookings = db.execute(select(
-        extract('dow', Booking.start_time).label("weekday"),
-        func.date(Booking.start_time).label("booking_date"),
-        func.count(Booking.id).label("booking_count"),
-        func.sum(func.extract('epoch', Booking.end_time - Booking.start_time) / 3600).label("occupation_time"))
-            .group_by(extract('dow', Booking.start_time), func.date(Booking.start_time))
-            .order_by(func.date(Booking.start_time).desc())
+
+    bookings = db.execute(select(
+        Booking.start_time,
+        Booking.end_time,
+        )
     ).all()
 
-    df = pd.DataFrame(daily_bookings, columns=[
-            'weekday', 'booking_date', 'bookings_count', 'occupation_time'
-        ])
+    df = pd.DataFrame(bookings, columns=['start_time', 'end_time'])
+    df['booking_date'] = pd.to_datetime(df['start_time']).dt.date
+    df['daily_occupation'] = (pd.to_datetime(df['end_time']) - pd.to_datetime(df['start_time'])).dt.total_seconds() / 3600
+    df['weekday'] = pd.to_datetime(df['start_time']).dt.weekday
     
     weekdays = {
                 0: 'Понедельник', 1: 'Вторник', 2: 'Среда',
                 3: 'Четверг', 4: 'Пятница', 5: 'Суббота', 6: 'Воскресенье'
             }
-    df['weekday_name'] = df['weekday'].map(weekdays)
+    df["weekday_name"] = df['weekday'].map(weekdays)
 
-    weekday_stats = df.groupby(['weekday', 'weekday_name'], as_index=False).agg({
-            'booking_date': 'count',
-            'bookings_count': 'sum',
-            'occupation_time': ['mean']
-        }).round(2)
+    weekday_stats = df.groupby(['weekday', 'weekday_name', 'booking_date'], as_index=False).agg({
+            'daily_occupation': 'sum'
+        }).reset_index()
     
+    weekday_stats = weekday_stats.groupby(['weekday', 'weekday_name'], as_index=False).agg({
+        'daily_occupation': 'mean',
+        'booking_date': 'count'
+    }).round(2)
+
     weekday_stats.columns = [
         'weekday', 
         'weekday_name', 
-        'days_with_bookings', 
-        'total_bookings', 
-        'avg_occupation_hours'
+        'avg_occupation_hours', 
+        'days_with_bookings'
     ]
 
     return weekday_stats
