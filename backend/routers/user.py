@@ -44,7 +44,7 @@ class UserRoleChangeResponse(BaseModel):
 
 class UserProfileUpdateRequest(BaseModel):
     password: str = Field(..., min_length=4, max_length=72, description="Пароль", examples=[1111])
-    new_password: str = Field(..., min_length=4, max_length=72, description="Новый пароль", examples=[2222])
+    new_password: Optional[str] = Field(None, min_length=4, max_length=72, description="Новый пароль", examples=[2222])
     employee_data: Optional[EmployeeUpdate] = None
 
 class UserProfileUpdateResponse(BaseModel):
