@@ -295,3 +295,44 @@ export async function register(
     headers: { "Content-Type": "multipart/form-data" },
   });
 }
+
+/** Текущий пользователь, извлечённый из payload JWT (id и логин). */
+export interface CurrentUser {
+  id: number;
+  username: string;
+}
+
+/** Разбирает payload JWT (без проверки подписи — она на бэкенде) и достаёт
+ *  идентификатор и логин текущего пользователя. */
+export function currentUser(): CurrentUser | null {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    if (typeof payload.id !== "number" || typeof payload.user !== "string") return null;
+    return { id: payload.id, username: payload.user };
+  } catch {
+    return null;
+  }
+}
+
+/** Роль пользователя в формате бэкенда. */
+export interface ApiRole {
+  id: number;
+  name: string;
+}
+
+/** GET /users/{id} — профиль (данные сотрудника) пользователя. Если у
+ *  пользователя нет привязанного сотрудника, бэкенд отдаёт сообщение — тогда
+ *  возвращаем null. */
+export async function getProfile(id: number): Promise<Employee | null> {
+  const { data } = await api.get<ApiEmployee | { message: string }>(`/users/${id}`);
+  if (!("id" in data)) return null;
+  return toEmployee(data);
+}
+
+/** GET /users/{id}/role — роль пользователя. */
+export async function getRole(id: number): Promise<ApiRole> {
+  const { data } = await api.get<ApiRole>(`/users/${id}/role`);
+  return data;
+}
