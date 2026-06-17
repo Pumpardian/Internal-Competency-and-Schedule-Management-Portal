@@ -42,7 +42,7 @@ def create_access_token(username: str, user_id: int, expires_timedelta: timedelt
     encode.update({"exp": expires.timestamp()})
     return jwt.encode(encode, Config.AUTH_SECRET, algorithm=Config.AUTH_ALGORITHM)
 
-def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
+def get_current_user(token: Annotated[str, Depends(oauth2_bearer)], db: Session = Depends(get_db)):
     """
     Декодирует JWT токен и возвращает информацию о пользователе.
 
@@ -53,8 +53,7 @@ def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
         username: str = payload.get("user")
         user_id: int = payload.get("id")
 
-        print(payload)
-        user = next(get_db()).execute(select(User).where(User.id == user_id)).scalar_one_or_none()
+        user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
         if username is None or user_id is None or user is None:
             raise HTTPException(
                 status_code=401,
