@@ -1,4 +1,4 @@
-from routers import employees, skills, bookings, employee_skills, user, role_permissions
+from routers import employees, skills, bookings, employee_skills, user, role_permissions, roles
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config import Config
@@ -55,7 +55,4 @@ app.include_router(skills.router, prefix="/api", tags=["Навыки"])
 app.include_router(employee_skills.router, prefix="/api", tags=["Навыки сотрудников"])
 app.include_router(bookings.router, prefix="/api", tags=["Бронирования"])
 app.include_router(role_permissions.router, prefix="/api", tags=["Права ролей"])
-
-#При расширении проекта может пригодиться, пока хардкод при инициализации
-#app.include_router(roles.router, prefix="/api", tags=["Роли"])
-#app.include_router(permissions.router, prefix="/api", tags=["Права"])
+app.include_router(roles.router, prefix="/api", tags=["Роли"])
