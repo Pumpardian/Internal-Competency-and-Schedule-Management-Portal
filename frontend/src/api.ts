@@ -252,3 +252,19 @@ export async function createBooking(date: string, draft: BookingDraft): Promise<
 export async function deleteBooking(id: number): Promise<void> {
   await api.delete(`/bookings/${id}`);
 }
+
+/** Ответ бэкенда на успешный вход. */
+interface ApiToken {
+  access_token: string;
+  token_type: string;
+}
+
+/** POST /login — вход по логину/паролю. Эндпоинт ждёт форму OAuth2
+ *  (x-www-form-urlencoded), а не JSON. При успехе сохраняем токен. */
+export async function login(username: string, password: string): Promise<void> {
+  const body = new URLSearchParams({ username, password });
+  const { data } = await api.post<ApiToken>("/login", body, {
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  });
+  setToken(data.access_token);
+}
