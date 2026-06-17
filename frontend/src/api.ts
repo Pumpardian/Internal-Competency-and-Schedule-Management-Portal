@@ -381,3 +381,9 @@ export async function updateProfile(
     headers: { "Content-Type": "multipart/form-data" },
   });
 }
+
+/** POST /users/{id}/role — сменить роль пользователя (нужно право
+ *  user_role.update; есть у роли admin). */
+export async function updateUserRole(id: number, roleId: number): Promise<void> {
+  await api.post(`/users/${id}/role`, { role_id: roleId });
+}
