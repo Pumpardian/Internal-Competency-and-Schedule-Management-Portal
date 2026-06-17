@@ -115,6 +115,11 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (myId === undefined) return;
+    // Бэкенд подтверждает любое изменение профиля текущим паролем.
+    if (!currentPassword) {
+      push({ type: "error", title: "Нужен пароль", msg: "Введите текущий пароль для подтверждения изменений." });
+      return;
+    }
     setSaving(true);
     try {
       const employeeChanges = employee
@@ -250,7 +255,7 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
           </label>
 
           <label className="auth-field">
-            <span>Текущий пароль (для подтверждения)</span>
+            <span>Текущий пароль (обязательно для сохранения)</span>
             <input
               className="input"
               type="password"
@@ -261,7 +266,7 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
             />
           </label>
 
-          <button className="btn primary" type="submit" disabled={saving || !currentPassword}>
+          <button className="btn primary" type="submit" disabled={saving}>
             {saving ? "Сохранение…" : "Сохранить изменения"}
           </button>
         </form>
