@@ -18,5 +18,8 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     hmr: hmrClientPort ? { clientPort: hmrClientPort } : undefined,
+    // На Windows-хосте события файловой системы не доходят до контейнера через
+    // bind-mount, поэтому следим за изменениями опросом (иначе нет хот-релоада).
+    watch: { usePolling: true },
   },
 });

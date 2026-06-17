@@ -33,6 +33,9 @@ services:
     env_file: .env
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB}
+      # На Windows-хосте события файловой системы не доходят до контейнера через
+      # bind-mount — заставляем reloader следить опросом, иначе нет хот-релоада.
+      - WATCHFILES_FORCE_POLLING=true
     expose:
       - "8000" # Порт для nginx
     volumes:
