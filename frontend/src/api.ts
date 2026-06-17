@@ -268,3 +268,30 @@ export async function login(username: string, password: string): Promise<void> {
   });
   setToken(data.access_token);
 }
+
+/** Данные сотрудника для регистрации (профиль создаётся вместе с аккаунтом). */
+export interface RegisterEmployee {
+  first_name: string;
+  last_name: string;
+  position?: string;
+}
+
+/** POST /register — регистрация пользователя. Эндпоинт принимает multipart:
+ *  поле `form` со строкой JSON (username/password/employee_data) и опциональный
+ *  файл `photo`. Поэтому собираем FormData, а не отправляем обычный JSON. */
+export async function register(
+  username: string,
+  password: string,
+  employee?: RegisterEmployee,
+  photo?: File | null,
+): Promise<void> {
+  const payload = { username, password, employee_data: employee ?? null };
+  const form = new FormData();
+  form.append("form", JSON.stringify(payload));
+  if (photo) {
+    form.append("photo", photo);
+  }
+  await api.post("/register", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
