@@ -363,6 +363,12 @@ export async function fetchRoles(): Promise<ApiRole[]> {
   return data.data;
 }
 
+/** GET /roles/{id}/permissions — названия прав роли (для проверки доступа на фронте). */
+export async function fetchRolePermissions(roleId: number): Promise<string[]> {
+  const { data } = await api.get<{ id: number; name: string }[]>(`/roles/${roleId}/permissions`);
+  return data.map((p) => p.name);
+}
+
 /** Изменяемые поля профиля сотрудника (все опциональны). */
 export interface ProfileEmployeeUpdate {
   first_name?: string;
