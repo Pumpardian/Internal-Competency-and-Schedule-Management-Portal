@@ -7,6 +7,7 @@
  */
 import { useState } from "react";
 import { CAL_END, CAL_START, HOUR_PX } from "../data";
+import { useAccess } from "../hooks/useAccess";
 import { useBookings } from "../hooks/useBookings";
 import type { Booking, BookingDraft, Employee, TimeRange, ToastInput } from "../types";
 import { fmt } from "../utils";
@@ -32,6 +33,23 @@ export function RoomPage({ employees, push }: RoomPageProps) {
   const [modal, setModal] = useState<TimeRange | null>(null);
   // Брони текущего дня с бэкенда.
   const { bookings, loading, error, reload, addBooking, removeBooking } = useBookings(date);
+  // Профиль и права текущего пользователя (бронь за других — по праву booking.create).
+  const { employee, can } = useAccess();
+  const canBookOthers = can("booking.create");
+  const canDeleteOthers = can("booking.delete");
+
+  /** Открыть модалку создания, проверив, что бронировать вообще можно. */
+  const openSlot = (range: TimeRange) => {
+    if (!canBookOthers && !employee) {
+      push({
+        type: "error",
+        title: "Недоступно",
+        msg: "К вашему аккаунту не привязан сотрудник — бронирование недоступно.",
+      });
+      return;
+    }
+    setModal(range);
+  };
 
   /** Сдвинуть просматриваемую дату на delta дней. */
   const shiftDate = (delta: number) => {
@@ -107,7 +125,7 @@ export function RoomPage({ employees, push }: RoomPageProps) {
               <div className="cal-time">{String(h).padStart(2, "0")}:00</div>
               <div
                 className="cal-track"
-                onClick={() => setModal({ startH: h, startM: 0, endH: h + 1, endM: 0 })}
+                onClick={() => openSlot({ startH: h, startM: 0, endH: h + 1, endM: 0 })}
               >
                 <div className="slot-hit" />
               </div>
@@ -131,14 +149,16 @@ export function RoomPage({ employees, push }: RoomPageProps) {
                   className="event"
                   style={{ top, height, background: color, pointerEvents: "auto" }}
                 >
-                  {/* Кнопка отмены брони (DELETE /bookings/{id}). */}
-                  <span
-                    className="ev-del"
-                    title="Отменить (DELETE /bookings/{id})"
-                    onClick={() => void cancelBooking(b)}
-                  >
-                    ×
-                  </span>
+                  {/* Кнопка отмены: своя бронь или есть право удалять за других. */}
+                  {(canDeleteOthers || b.empId === employee?.id) && (
+                    <span
+                      className="ev-del"
+                      title="Отменить (DELETE /bookings/{id})"
+                      onClick={() => void cancelBooking(b)}
+                    >
+                      ×
+                    </span>
+                  )}
                   <div className="ev-title">{b.topic}</div>
                   <div className="ev-meta">
                     {fmt(b.startH, b.startM)} – {fmt(b.endH, b.endM)} · {emp ? emp.name : "—"}
@@ -156,6 +176,7 @@ export function RoomPage({ employees, push }: RoomPageProps) {
           employees={employees}
           date={date}
           init={modal}
+          lockedEmployee={canBookOthers ? null : employee}
           onClose={() => setModal(null)}
           onSubmit={(data) => void createBooking(data)}
         />
