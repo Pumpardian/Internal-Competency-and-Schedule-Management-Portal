@@ -14,6 +14,33 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+/** Ключ, под которым JWT хранится в localStorage. */
+const TOKEN_KEY = "portal_token";
+
+/** Текущий JWT (или null, если пользователь не авторизован). */
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+/** Сохранить JWT после успешного входа. */
+export function setToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+
+/** Удалить JWT (выход из системы / истёкший токен). */
+export function clearToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+/** Подставляем токен в заголовок Authorization для всех запросов. */
+api.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 /** Сотрудник в формате бэкенда (фамилия и имя раздельно). */
 interface ApiEmployee {
   id: number;
