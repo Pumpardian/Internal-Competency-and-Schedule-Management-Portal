@@ -71,7 +71,7 @@ class EmployeeSkill(Base):
     )
     skill_id = Column(
         Integer,
-        ForeignKey("skills.id", ondelete='CASCADE', onupdate='CASCADE'), 
+        ForeignKey("skills.id", ondelete='RESTRICT', onupdate='CASCADE'), 
         nullable=False
     )
     level = Column(
@@ -138,7 +138,7 @@ class RolePermission(Base):
     )
     permission_id = Column(
         Integer,
-        ForeignKey("permissions.id", ondelete='CASCADE', onupdate='CASCADE'),
+        ForeignKey("permissions.id", ondelete='RESTRICT', onupdate='CASCADE'),
         nullable=False
     )
 

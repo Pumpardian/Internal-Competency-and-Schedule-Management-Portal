@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 from typing import List
 from math import ceil
 
-from models import Skill, skill_categories
+from models import Skill, skill_categories, EmployeeSkill
 from dependencies import get_db
 from utils.auth import user_dependency, require_permission
 
@@ -262,6 +262,7 @@ def update_skill(
         401: {"description": "Не авторизован"},
         403: {"description": "Недостаточно прав доступа"},
         404: {"description": "Навык не найден"},
+        409: {"description": "Навык используется сотрудниками, удаление невозможно"},
     }
 )
 def delete_skill(
@@ -286,6 +287,14 @@ def delete_skill(
             detail="Навык не найден"
         )
     
+    statement = select(EmployeeSkill).where(EmployeeSkill.skill_id == id)
+    employee_skill = db.execute(statement).scalars().first()
+    if employee_skill:
+        raise HTTPException(
+            status_code=409,
+            detail="Навык используется сотрудниками, удаление невозможно"
+        )
+
     db.delete(skill)
     db.commit()
     return {"message": "Навык был успешно удален"}
