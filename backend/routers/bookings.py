@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from typing import List
 
 from models import Booking, User
-from dependencies import get_db
+from dependencies import get_db, get_logger
 from utils.auth import user_dependency, require_permission, get_current_user, check_user_permission
 
 router = APIRouter()
@@ -146,6 +146,8 @@ async def create_booking(
     db.add(booking)
     db.commit()
     db.refresh(booking)
+    get_logger().info(f"Создана бронь (ID: {booking.id}) {booking.topic} сотрудника с ID {booking.employee_id} \
+                       на {booking.start_time} продолжительностью {booking.end_time - booking.start_time}")
     return booking
 
 
@@ -211,7 +213,10 @@ async def update_booking(
             detail=f"Указанный временной диапазон пересекается с '{overlapping.topic}' [{overlapping.start_time} - {overlapping.end_time}]"
         )
     
-    
+    get_logger().info(f"Обновлена бронь (ID: {booking.id}) {booking.topic} сотрудника с ID {booking.employee_id} \
+                       до {booking_data.topic} для сотрудника с ID {booking_data.employee_id} на {booking_data.start_time} \
+                       продолжительностью {booking_data.end_time - booking_data.start_time}")
+        
     booking.employee_id=booking_data.employee_id,
     booking.topic=booking_data.topic,
     booking.start_time=booking_data.start_time,
@@ -267,7 +272,8 @@ async def delete_booking(
             status_code=403,
             detail="Недостаточно прав для удаления брони за других"
         )
-    
+
     db.delete(booking)
     db.commit()
+    get_logger().info(f"Удалена бронь (ID: {booking.id}) {booking.topic} сотрудника с ID {booking.employee_id}")
     return {"message": "Бронь успешно удалена"}
