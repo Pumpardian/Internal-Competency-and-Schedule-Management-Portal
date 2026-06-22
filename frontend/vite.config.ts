@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 // Доступ к переменным окружения сборки без зависимости от @types/node.
@@ -21,5 +21,9 @@ export default defineConfig({
     // На Windows-хосте события файловой системы не доходят до контейнера через
     // bind-mount, поэтому следим за изменениями опросом (иначе нет хот-релоада).
     watch: { usePolling: true },
+  },
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./src/test/setup.ts"],
   },
 });
