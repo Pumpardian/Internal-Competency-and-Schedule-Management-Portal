@@ -10,11 +10,13 @@ import {
   currentUser,
   deleteAccount,
   fetchRoles,
+  fetchUsers,
   getProfile,
   getRole,
   updateProfile,
   updateUserRole,
   type ApiRole,
+  type ApiUserListItem,
 } from "../api";
 import type { Employee, ToastInput } from "../types";
 
@@ -58,6 +60,9 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
   const [targetUserId, setTargetUserId] = useState("");
   const [targetRoleId, setTargetRoleId] = useState<number | "">("");
   const [changingRole, setChangingRole] = useState(false);
+  // Список пользователей и строка поиска (для выбора при смене роли).
+  const [users, setUsers] = useState<ApiUserListItem[]>([]);
+  const [userSearch, setUserSearch] = useState("");
 
   // Удаление аккаунта.
   const [deletePassword, setDeletePassword] = useState("");
@@ -65,6 +70,16 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
 
   const myId = me?.id;
   const isAdmin = role?.name === "admin";
+
+  // Фильтр пользователей по ФИО или логину (для выпадающего списка смены роли).
+  const userQuery = userSearch.trim().toLowerCase();
+  const filteredUsers = userQuery
+    ? users.filter(
+        (u) =>
+          (u.full_name ?? "").toLowerCase().includes(userQuery) ||
+          u.username.toLowerCase().includes(userQuery),
+      )
+    : users;
 
   // Превью аватара: только что выбранный файл, иначе текущее сохранённое фото.
   const photoPreview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
@@ -126,6 +141,18 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
     };
   }, [isAdmin]);
 
+  // Список пользователей нужен только администратору — для выбора при смене роли.
+  useEffect(() => {
+    if (!isAdmin) return;
+    let active = true;
+    fetchUsers()
+      .then((us) => active && setUsers(us))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [isAdmin]);
+
   /** Сохранение изменений профиля (с подтверждением текущим паролем). */
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,9 +194,14 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
     setChangingRole(true);
     try {
       await updateUserRole(uid, Number(targetRoleId));
-      push({ title: "Роль изменена", msg: `Пользователь #${uid}` });
+      const picked = users.find((u) => u.id === uid);
+      push({
+        title: "Роль изменена",
+        msg: picked ? (picked.full_name ?? picked.username) : `Пользователь #${uid}`,
+      });
       setTargetUserId("");
       setTargetRoleId("");
+      setUserSearch("");
     } catch (err) {
       push({ type: "error", title: "Ошибка", msg: errMessage(err) });
     } finally {
@@ -310,15 +342,28 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
         <form className="card" style={{ marginTop: 16 }} onSubmit={handleChangeRole}>
           <div className="profile-section-title">Смена роли пользователя</div>
           <label className="auth-field">
-            <span>ID пользователя</span>
+            <span>Поиск пользователя</span>
             <input
               className="input"
-              type="number"
-              min={1}
-              placeholder="Напр. 2"
+              placeholder="Имя или логин…"
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+            />
+          </label>
+          <label className="auth-field">
+            <span>Пользователь</span>
+            <select
+              className="input"
               value={targetUserId}
               onChange={(e) => setTargetUserId(e.target.value)}
-            />
+            >
+              <option value="">— выберите пользователя —</option>
+              {filteredUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.full_name ? `${u.full_name} (${u.username})` : u.username}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="auth-field">
             <span>Роль</span>
