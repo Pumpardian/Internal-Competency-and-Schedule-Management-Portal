@@ -60,9 +60,10 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
   const [targetUserId, setTargetUserId] = useState("");
   const [targetRoleId, setTargetRoleId] = useState<number | "">("");
   const [changingRole, setChangingRole] = useState(false);
-  // Список пользователей и строка поиска (для выбора при смене роли).
+  // Список пользователей, строка поиска и открытие подсказок (для выбора при смене роли).
   const [users, setUsers] = useState<ApiUserListItem[]>([]);
   const [userSearch, setUserSearch] = useState("");
+  const [comboOpen, setComboOpen] = useState(false);
 
   // Удаление аккаунта.
   const [deletePassword, setDeletePassword] = useState("");
@@ -342,28 +343,42 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
         <form className="card" style={{ marginTop: 16 }} onSubmit={handleChangeRole}>
           <div className="profile-section-title">Смена роли пользователя</div>
           <label className="auth-field">
-            <span>Поиск пользователя</span>
-            <input
-              className="input"
-              placeholder="Имя или логин…"
-              value={userSearch}
-              onChange={(e) => setUserSearch(e.target.value)}
-            />
-          </label>
-          <label className="auth-field">
             <span>Пользователь</span>
-            <select
-              className="input"
-              value={targetUserId}
-              onChange={(e) => setTargetUserId(e.target.value)}
-            >
-              <option value="">— выберите пользователя —</option>
-              {filteredUsers.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.full_name ? `${u.full_name} (${u.username})` : u.username}
-                </option>
-              ))}
-            </select>
+            <div className="combo">
+              <input
+                className="input"
+                placeholder="Имя или логин… (нажмите для списка)"
+                value={userSearch}
+                onChange={(e) => {
+                  setUserSearch(e.target.value);
+                  setTargetUserId(""); // ввод сбрасывает выбор — нужно выбрать из подсказок
+                  setComboOpen(true);
+                }}
+                onFocus={() => setComboOpen(true)}
+                onBlur={() => window.setTimeout(() => setComboOpen(false), 150)}
+              />
+              {comboOpen && filteredUsers.length > 0 && (
+                <ul className="combo-list">
+                  {filteredUsers.slice(0, 50).map((u) => {
+                    const label = u.full_name ? `${u.full_name} (${u.username})` : u.username;
+                    return (
+                      <li
+                        key={u.id}
+                        className={String(u.id) === targetUserId ? "active" : ""}
+                        // onMouseDown срабатывает до onBlur поля — выбор не теряется.
+                        onMouseDown={() => {
+                          setTargetUserId(String(u.id));
+                          setUserSearch(label);
+                          setComboOpen(false);
+                        }}
+                      >
+                        {label}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </label>
           <label className="auth-field">
             <span>Роль</span>

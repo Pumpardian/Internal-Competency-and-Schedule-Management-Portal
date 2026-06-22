@@ -370,6 +370,18 @@ body {
 .emp-list-info .pos { color: var(--muted); font-size: 13px; }
 .emp-list-go { color: var(--muted); font-size: 20px; }
 
+/* ---------- Комбобокс с подсказками (выбор пользователя) ---------- */
+.combo { position: relative; }
+.combo .input { width: 100%; }
+.combo-list {
+  position: absolute; z-index: 40; top: calc(100% + 2px); left: 0; right: 0;
+  max-height: 240px; overflow-y: auto; margin: 0; padding: 4px; list-style: none;
+  background: #fff; border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.12);
+}
+.combo-list li { padding: 7px 10px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+.combo-list li:hover, .combo-list li.active { background: #f5f8ff; }
+
 /* ---------- Фиксы отображения/наложения ---------- */
 /* Длинное ФИО не должно наезжать на кнопки действий в матрице. */
 .emp-ident { min-width: 0; }
