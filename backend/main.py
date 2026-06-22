@@ -1,4 +1,4 @@
-from routers import employees, skills, bookings, employee_skills, user, role_permissions
+from routers import employees, skills, bookings, employee_skills, user, role_permissions, roles
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config import Config
@@ -6,7 +6,6 @@ from init import init
 from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 import os
-
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 employees_dir = os.path.join(static_dir, "employees")
@@ -25,7 +24,10 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    lifespan=lifespan
+    lifespan=lifespan,
+    title="Внутренний портал управления компетенциями и расписанием",
+    description="API для реализации управления компетенциями и расписания переговорной с правами доступа",
+    version="1.0.0"
 )
 
 
@@ -55,7 +57,4 @@ app.include_router(skills.router, prefix="/api", tags=["Навыки"])
 app.include_router(employee_skills.router, prefix="/api", tags=["Навыки сотрудников"])
 app.include_router(bookings.router, prefix="/api", tags=["Бронирования"])
 app.include_router(role_permissions.router, prefix="/api", tags=["Права ролей"])
-
-#При расширении проекта может пригодиться, пока хардкод при инициализации
-#app.include_router(roles.router, prefix="/api", tags=["Роли"])
-#app.include_router(permissions.router, prefix="/api", tags=["Права"])
+app.include_router(roles.router, prefix="/api", tags=["Роли"])

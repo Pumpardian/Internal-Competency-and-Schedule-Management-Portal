@@ -1,91 +1,127 @@
 # Internal Competency and Schedule Management Portal
 
-Внутренний портал управления компетенциями и расписанием. Ветка `dev`
-объединяет серверную часть и клиент: фронтенд работает с матрицей компетенций
-бэкенда по REST API (страница «Команда и навыки» использует реальные данные,
-а не заглушки).
+Внутренний портал отдела цифровизации: матрица компетенций сотрудников,
+бронирование переговорной, профили и управление учётными записями с
+ролевым доступом.
+
+Весь стек запускается в Docker. Есть два варианта окружения:
+**dev** (хот-релоад фронта и бэка) и **prod** (собранная статика, без релоада).
 
 ## Архитектура
 
 ```
-backend/      — FastAPI + SQLAlchemy + Alembic (PostgreSQL)
-frontend/     — TypeScript + React + Vite
-diagrams/     — ER-диаграмма БД
-docker-compose.yaml — PostgreSQL для разработки
+браузер → http://localhost (nginx)
+                 ├─ /            → фронтенд (dev: Vite-сервер / prod: собранный SPA)
+                 ├─ /api, /docs  → backend (FastAPI)
+                 └─ /static/     → файлы (фото сотрудников)
 ```
 
-- Бэкенд предоставляет REST API под префиксом `/api`; маршруты разбиты по
-  роутерам в `backend/routers/` (сотрудники, навыки, навыки сотрудников,
-  бронирования). Интерактивная документация — Swagger по адресу `/docs`.
-- Основные ресурсы: `/api/employees`, `/api/skills`,
-  `/api/employees/{id}/skills`, `/api/bookings`.
-- Список сотрудников постраничный: `GET /api/employees` принимает
-  `current_page` (по умолчанию 1) и `page_size` (1–20, по умолчанию 10), а
-  возвращает объект `{ page_size, current_page, total_pages, data: [...] }`.
-- Фронтенд через слой `frontend/src/api.ts` (клиент на axios) и хук
-  `useCompetency` загружает матрицу и сохраняет изменения уровней (POST/PATCH).
-- Подсистема «Переговорная»: на бэкенде эндпоинты бронирования уже есть
-  (`/api/bookings`), но клиент пока работает на локальных данных — интеграция
-  ещё не подключена.
+nginx - единственная точка входа на порт 80. Backend (8000) и фронт (5173)
+наружу не публикуются - к ним обращается только nginx внутри docker-сети.
 
-## Запуск
+- **backend/** - FastAPI + SQLAlchemy + Alembic (PostgreSQL). REST API под
+  префиксом `/api`, интерактивная документация — Swagger по `/docs`.
+  Авторизация - JWT (пароли хешируются argon2). Доступ к изменениям
+  разграничен ролями и правами.
+- **frontend/** - TypeScript + React + Vite, общение с API через axios.
+- **nginx/** - конфиг dev-прокси. Прод-конфиг лежит в `frontend/nginx.prod.conf`.
+- **diagrams/** - ER-диаграмма БД (`er-diagram.drawio`).
 
-Порядок важен: **БД → миграции → бэкенд → фронтенд**. Команды ниже для PowerShell.
+## Требования
 
-### 1. База данных (Docker)
+- Docker Desktop
 
-Создайте `.env` рядом с `docker-compose.yaml`:
+## Переменные окружения
+
+Создайте в корне файл `.env` (рядом с `docker-compose.yaml`) по образцу
+`.env.example`:
 
 ```
-POSTGRES_USER=portal
-POSTGRES_PASSWORD=portal
-POSTGRES_DB=portal
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=admin
+POSTGRES_DB=postgres
+
+# Подпись JWT (значения без кавычек - docker env_file передаёт их буквально)
+AUTH_SECRET=замените_на_свой_случайный_секрет
+AUTH_ALGORITHM=HS256
 ```
 
-```powershell
-docker compose up -d        # PostgreSQL на хост-порту 5433 (внутри 5432)
-docker ps                   # контейнер postgres-database должен быть Up
-```
-
-### 2. Бэкенд
-
-```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Copy-Item .env.example .env           # затем проверьте порт 5433 и CORS
-alembic upgrade head                  # применить миграции
-uvicorn main:app --reload             # http://127.0.0.1:8000, Swagger: /docs
-```
-
-`backend/.env`:
+Файл `frontend/.env` (для dev; берётся из `frontend/.env.example`):
 
 ```
-DATABASE_URL=postgresql+psycopg2://portal:portal@localhost:5433/portal
-CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+VITE_API_BASE=/api
 ```
 
-### 3. Фронтенд
+> Адрес относительный, потому что фронт ходит на бэкенд через тот же nginx.
+> В прод-сборке `/api` зашивается автоматически.
 
-```powershell
-cd frontend
-npm install
-npm run dev                 # http://localhost:5173
+## Запуск (dev)
+
+```bash
+docker compose -f docker-compose.yaml build      # первая сборка
+docker compose -f docker-compose.yaml up -d
+docker compose -f docker-compose.yaml ps         # все контейнеры Up, postgres — healthy
 ```
 
-`frontend/.env` (адрес бэкенда — обязательно с префиксом `/api`):
+Откройте **http://localhost** (Swagger — **http://localhost/docs**).
 
+Миграции применяются автоматически при старте backend. Учётная запись
+администратора `admin` / `admin` создаётся при первом запуске.
+
+## Демо-данные
+
+Наполнить БД сотрудниками, навыками, уровнями и бронями (а также завести
+учётку с ролью каждому сотруднику) — запустите seed внутри контейнера backend:
+
+```bash
+docker compose -f docker-compose-dev.yaml exec backend python seed_demo.py
 ```
-VITE_API_BASE=http://127.0.0.1:8000/api
+
+Создаётся 100 сотрудников и навыков, ~1000 уровней владения и демо-брони на
+`2026-06-08`. Логины сотрудников - транслит фамилии + номер, пароль у всех
+`password`. Роли: «Иванов Иван» (`ivanov1`) - admin, каждый 5-й — manager,
+остальные - user.
+
+> seed очищает прежние демо-данные и учётки (кроме системного `admin`).
+
+## Запуск (prod)
+
+Так стек разворачивают на сервере для реальных пользователей: backend без
+`--reload` (с воркерами), фронт собран в минифицированную статику и отдаётся
+nginx, код вшит в образ.
+
+```bash
+docker compose docker-compose-prod.yaml build
+docker compose docker-compose-prod.yaml up -d
 ```
 
-### Демо-данные (необязательно)
+Прод-стек поднимается под отдельным именем проекта (`portal-prod`), поэтому его
+образы/тома/контейнеры не пересекаются с dev. Адрес тот же — **http://localhost**.
 
-Наполнить БД примерами сотрудников, навыков и уровней (бэк должен быть
-запущен):
+## Аккаунты и роли
 
-```powershell
-cd backend
-.\.venv\Scripts\python.exe seed_demo.py
-```
+- **admin** - полный доступ: матрица (сотрудники/навыки/уровни), смена ролей
+  пользователей, всё остальное.
+- **manager** - может менять уровни владения и работать с бронями.
+- **user** - просмотр; в переговорной может бронировать только за себя.
+
+Интерфейс скрывает недоступные действия в зависимости от прав, а backend
+дополнительно проверяет их на каждом изменяющем запросе.
+
+## Страницы
+
+- **Команда и навыки** — матрица компетенций (тепловая карта), пагинация.
+- **Переговорная** — календарь броней на день.
+- **Профиль** — карточка сотрудника с навыками.
+- **Аккаунт** — свой профиль (правка с подтверждением паролем, смена пароля,
+  фото), своя роль; для admin — смена роли других и удаление аккаунта.
+
+## API
+
+Маршруты под префиксом `/api`, разбиты по роутерам в `backend/routers/`:
+пользователи и авторизация, сотрудники, навыки, навыки сотрудников,
+бронирования, роли и права. Полное описание — в Swagger по `/docs`.
+
+Списки сотрудников и навыков постраничные: параметры `current_page`
+(по умолчанию 1) и `page_size` (1–20, по умолчанию 10); ответ —
+`{ page_size, current_page, total_pages, data: [...] }`.

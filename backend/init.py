@@ -43,7 +43,7 @@ def init_permissions(admin_role_id: int, manager_role_id: int):
     db: Session = next(get_db())
     permissions = [
         "employee.create", "employee.update", "employee.delete",
-        "booking.create", "booking.delete",
+        "booking.create", "booking.update", "booking.delete",
         "skill.create", "skill.update", "skill.delete",
         "employee_skill.create", "employee_skill.update", "employee_skill.delete",
         "user_role.update"

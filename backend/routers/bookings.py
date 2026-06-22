@@ -7,14 +7,14 @@ from pydantic import BaseModel, Field, field_validator
 from typing import List
 
 from models import Booking, User
-from dependencies import get_db
+from dependencies import get_db, get_logger
 from utils.auth import user_dependency, require_permission, get_current_user, check_user_permission
 
 router = APIRouter()
 
 #Модели
-class BookingCreate(BaseModel):
-    """Модель для создания бронирования"""
+class BookingCreateOrUpdate(BaseModel):
+    """Модель для создания/обновления бронирования"""
     employee_id: int = Field(..., gt=0, description="Уникальный идентификатор сотрудника", examples=[123])
     topic: str = Field(..., min_length=1, max_length=255, description="Тема бронирования", examples=["Совещание по проекту"])
     start_time: datetime = Field(..., description="Время начала", examples=["2026-06-16T10:00:00"])
@@ -96,9 +96,9 @@ def get_bookings(
         422: {"description": "Неверный формат данных"}
     }
 )
-def create_booking(
+async def create_booking(
     request: Request,
-    booking_data: BookingCreate,
+    booking_data: BookingCreateOrUpdate,
     user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -118,7 +118,7 @@ def create_booking(
     user: User = db.execute(statement).scalar_one_or_none()
 
     if (not user.employee or not user.employee.id == booking_data.employee_id) \
-    and not check_user_permission(db, user.id, "booking.create", request.app.state.admin_role_id):
+    and not await check_user_permission(db, user.id, "booking.create", request.app.state.admin_role_id):
         raise HTTPException(
             status_code=403,
             detail="Недостаточно прав для создания брони за других"
@@ -146,6 +146,84 @@ def create_booking(
     db.add(booking)
     db.commit()
     db.refresh(booking)
+    get_logger().info(f"Создана бронь (ID: {booking.id}) {booking.topic} сотрудника с ID {booking.employee_id} \
+                       на {booking.start_time} продолжительностью {booking.end_time - booking.start_time}")
+    return booking
+
+
+@router.patch(
+    "/bookings/{id}", 
+    response_class=JSONResponse, 
+    response_model=BookingResponse,
+    summary="Обновить бронь",
+    responses={
+        200: {"description": "Бронь обновлена", "model": BookingResponse},
+        400: {"description": "Неверные данные"},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
+        409: {"description": "Бронь пересекается с существующей"},
+        422: {"description": "Неверный формат данных"}
+    }
+)
+async def update_booking(
+    id: int,
+    request: Request,
+    booking_data: BookingCreateOrUpdate,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    '''
+    Обновление указанной брони.
+    
+    Путь запроса:
+    - **id**: Уникальный идентификатор брони **[int]**.
+
+    Тело запроса:
+    - **employee_id**: Уникальный идентификатор сотрудника **[int]** (обязательно, >0).
+    - **topic**: Тема бронирования **[string]** (обязательно, 1-255 символов).
+    - **start_time**: Время начала в формате YYYY-MM-DDThh:mm:ss **[datetime]** (обязательно).
+    - **end_time**: Время окончания в формате YYYY-MM-DDThh:mm:ss **[datetime]** (обязательно, должно быть позже start_time).
+    
+    Возвращает обновленную бронь с присвоенным уникальным идентификатором.
+    '''
+    
+    statement = select(Booking).where(Booking.id == id)
+    booking = db.execute(statement).scalar_one_or_none()
+
+    statement = select(User).where(User.id == user["id"])
+    user: User = db.execute(statement).scalar_one_or_none()
+
+    if (not user.employee or not user.employee.id == booking.employee_id or not user.employee.id == booking_data.employee_id) \
+    and not await check_user_permission(db, user.id, "booking.update", request.app.state.admin_role_id):
+        raise HTTPException(
+            status_code=403,
+            detail="Недостаточно прав для обновления брони за других (или переписывания на других)"
+        )
+
+    statement = select(Booking).where(
+        and_(
+            Booking.start_time < booking_data.end_time,
+            Booking.end_time > booking_data.start_time
+        )
+    )
+    overlapping = db.execute(statement).scalar_one_or_none()
+    if overlapping:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Указанный временной диапазон пересекается с '{overlapping.topic}' [{overlapping.start_time} - {overlapping.end_time}]"
+        )
+    
+    get_logger().info(f"Обновлена бронь (ID: {booking.id}) {booking.topic} сотрудника с ID {booking.employee_id} \
+                       до {booking_data.topic} для сотрудника с ID {booking_data.employee_id} на {booking_data.start_time} \
+                       продолжительностью {booking_data.end_time - booking_data.start_time}")
+        
+    booking.employee_id=booking_data.employee_id,
+    booking.topic=booking_data.topic,
+    booking.start_time=booking_data.start_time,
+    booking.end_time=booking_data.end_time
+
+    db.commit()
+    db.refresh(booking)
     return booking
 
 
@@ -162,7 +240,7 @@ def create_booking(
         422: {"description": "Неверный формат уникального идентификатора"}
     }
 )
-def delete_booking(
+async def delete_booking(
     request: Request,
     user: dict = Depends(get_current_user),
     id: int = Path(..., description="Уникальный идентификатор брони", ge=1, examples=[1]),
@@ -189,12 +267,13 @@ def delete_booking(
         )
     
     if (not user.employee or not user.employee.id == booking.employee_id) \
-    and not check_user_permission(db, user.id, "booking.delete", request.app.state.admin_role_id):
+    and not await check_user_permission(db, user.id, "booking.delete", request.app.state.admin_role_id):
         raise HTTPException(
             status_code=403,
             detail="Недостаточно прав для удаления брони за других"
         )
-    
+
     db.delete(booking)
     db.commit()
+    get_logger().info(f"Удалена бронь (ID: {booking.id}) {booking.topic} сотрудника с ID {booking.employee_id}")
     return {"message": "Бронь успешно удалена"}

@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field, field_validator
 from typing import List
 from math import ceil
 
-from models import Skill, skill_categories
-from dependencies import get_db
+from models import Skill, skill_categories, EmployeeSkill
+from dependencies import get_db, get_logger
 from utils.auth import user_dependency, require_permission
 
 router = APIRouter()
@@ -183,6 +183,7 @@ def add_skill(
         db.add(skill)
         db.commit()
         db.refresh(skill)
+        get_logger().info(f"Создан навык (ID: {skill.id}) с названием {skill.name} и категорией {skill.category}")
         return skill
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -242,6 +243,8 @@ def update_skill(
                 status_code=409,
                 detail=f"Навык '{skill_data.name}' уже существует"
             )
+        get_logger().info(f"Обновлен навык (ID: {skill.id}) с названием {skill.name} и категорией {skill.category} \
+                          на {skill_data.name} и категорией {skill_data.category}")
         skill.name = skill_data.name
     
     if skill_data.category is not None:
@@ -262,6 +265,7 @@ def update_skill(
         401: {"description": "Не авторизован"},
         403: {"description": "Недостаточно прав доступа"},
         404: {"description": "Навык не найден"},
+        409: {"description": "Навык используется сотрудниками, удаление невозможно"},
     }
 )
 def delete_skill(
@@ -286,6 +290,15 @@ def delete_skill(
             detail="Навык не найден"
         )
     
+    statement = select(EmployeeSkill).where(EmployeeSkill.skill_id == id)
+    employee_skill = db.execute(statement).scalars().first()
+    if employee_skill:
+        raise HTTPException(
+            status_code=409,
+            detail="Навык используется сотрудниками, удаление невозможно"
+        )
+
     db.delete(skill)
     db.commit()
+    get_logger().info(f"Удален навык (ID: {skill.id}) с названием {skill.name} и категорией {skill.category}")
     return {"message": "Навык был успешно удален"}

@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 
 from models import Employee, Skill, EmployeeSkill
-from dependencies import get_db
+from dependencies import get_db, get_logger
 from utils.auth import user_dependency, require_permission
 
 router = APIRouter()
@@ -99,10 +99,10 @@ def get_employee_skills(
 
 
 @router.post(
-    "/employees/{employee_id}/skills/{skill_id}", 
-    response_class=JSONResponse, 
+    "/employees/{employee_id}/skills/{skill_id}",
+    response_class=JSONResponse,
     status_code=201,
-    response_model=EmployeeSkillDetailResponse,
+    response_model=EmployeeSkillResponse,
     summary="Добавить навык сотруднику",
     responses={
         201: {"description": "Навык сотрудника создан", "model": EmployeeSkillResponse},
@@ -169,6 +169,9 @@ def add_employee_skill(
     db.add(employee_skill)
     db.commit()
     db.refresh(employee_skill)
+    get_logger().info(f"Добавлен навык (ID: {skill.id}) с названием {skill.name} и категорией {skill.name} \
+                      для сотрудника (ID: {employee.id}) {employee.last_name} {employee.first_name} \
+                      с уровнем владения {employee_skill.level}")
     return {
         "id": skill.id,
         "name": skill.name,
@@ -223,6 +226,9 @@ def update_employee_skill(
             detail="Навык сотрудника не найден"
         )
 
+    get_logger().info(f"Обновлен навык (ID: {employee_skill.skill_id}) \
+                    для сотрудника (ID: {employee_skill.employee_id}) \
+                    с уровня владения {employee_skill.level} на {skill_data.level}")
     employee_skill.level = skill_data.level
     db.commit()
     db.refresh(employee_skill)
@@ -273,4 +279,6 @@ def delete_employee_skill(
     
     db.delete(employee_skill)
     db.commit()
+    get_logger().info(f"Удален навык (ID: {employee_skill.skill_id}) с \
+                      для сотрудника (ID: {employee_skill.employee_id})")
     return {"message": f"Навык (ID: {skill_id}) успешно удален у сотрудника (ID: {employee_id})"}

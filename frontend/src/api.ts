@@ -159,13 +159,18 @@ export async function patchSkillLevel(empId: number, skillId: number, level: num
   await api.patch(`/employees/${empId}/skills/${skillId}`, { level });
 }
 
-/** POST /employees — создать сотрудника. */
+/** POST /employees — создать сотрудника. Эндпоинт принимает multipart: поле
+ *  `form` со строкой JSON и опциональное фото (здесь без фото). */
 export async function createEmployee(
   first_name: string,
   last_name: string,
   position?: string,
 ): Promise<void> {
-  await api.post("/employees", { first_name, last_name, position });
+  const form = new FormData();
+  form.append("form", JSON.stringify({ first_name, last_name, position }));
+  await api.post("/employees", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 }
 
 /** POST /skills — создать навык. */
@@ -173,12 +178,17 @@ export async function createSkill(name: string, category: string): Promise<void>
   await api.post("/skills", { name, category });
 }
 
-/** PATCH /employees/{id} — обновить данные сотрудника (поля опциональны). */
+/** PATCH /employees/{id} — обновить данные сотрудника (поля опциональны).
+ *  Эндпоинт принимает multipart: поле `form` со строкой JSON и опциональное фото. */
 export async function updateEmployee(
   id: number,
   fields: { first_name?: string; last_name?: string; position?: string },
 ): Promise<void> {
-  await api.patch(`/employees/${id}`, fields);
+  const form = new FormData();
+  form.append("form", JSON.stringify(fields));
+  await api.patch(`/employees/${id}`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 }
 
 /** DELETE /employees/{id} — удалить сотрудника. */
@@ -334,8 +344,8 @@ export interface ApiRole {
  *  пользователя нет привязанного сотрудника, бэкенд отдаёт сообщение — тогда
  *  возвращаем null. */
 export async function getProfile(id: number): Promise<Employee | null> {
-  const { data } = await api.get<ApiEmployee | { message: string }>(`/users/${id}`);
-  if (!("id" in data)) return null;
+  const { data } = await api.get<ApiEmployee | null>(`/users/${id}`);
+  if (!data || typeof data !== "object" || !("id" in data)) return null;
   return toEmployee(data);
 }
 
@@ -343,4 +353,74 @@ export async function getProfile(id: number): Promise<Employee | null> {
 export async function getRole(id: number): Promise<ApiRole> {
   const { data } = await api.get<ApiRole>(`/users/${id}/role`);
   return data;
+}
+
+/** GET /roles — список ролей (для выбора при смене роли пользователя). */
+export async function fetchRoles(): Promise<ApiRole[]> {
+  const { data } = await api.get<ApiPage<ApiRole>>("/roles", {
+    params: { current_page: 1, page_size: 20 },
+  });
+  return data.data;
+}
+
+/** GET /roles/{id}/permissions — названия прав роли (для проверки доступа на фронте). */
+export async function fetchRolePermissions(roleId: number): Promise<string[]> {
+  const { data } = await api.get<{ id: number; name: string }[]>(`/roles/${roleId}/permissions`);
+  return data.map((p) => p.name);
+}
+
+/** Пользователь в списке (для выбора при смене роли). */
+export interface ApiUserListItem {
+  id: number;
+  username: string;
+  full_name: string | null;
+}
+
+/** GET /users — список пользователей (id, логин, ФИО). Доступен при праве
+ *  user_role.update — используется для выбора пользователя при смене роли. */
+export async function fetchUsers(): Promise<ApiUserListItem[]> {
+  const { data } = await api.get<ApiUserListItem[]>("/users");
+  return data;
+}
+
+/** Изменяемые поля профиля сотрудника (все опциональны). */
+export interface ProfileEmployeeUpdate {
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+}
+
+/** PATCH /users/{id}/profile — обновление профиля. Эндпоинт принимает multipart:
+ *  поле `form` со строкой JSON (текущий пароль обязателен, новый пароль и данные
+ *  сотрудника опциональны) и опциональный файл `photo`. */
+export async function updateProfile(
+  id: number,
+  password: string,
+  changes: { newPassword?: string; employee?: ProfileEmployeeUpdate },
+  photo?: File | null,
+): Promise<void> {
+  const payload: Record<string, unknown> = { password };
+  if (changes.newPassword) payload.new_password = changes.newPassword;
+  if (changes.employee) payload.employee_data = changes.employee;
+  const form = new FormData();
+  form.append("form", JSON.stringify(payload));
+  if (photo) {
+    form.append("photo", photo);
+  }
+  await api.patch(`/users/${id}/profile`, form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+
+/** POST /users/{id}/role — сменить роль пользователя (нужно право
+ *  user_role.update; есть у роли admin). Эндпоинт ждёт role_id сырым числом в
+ *  теле (Body без embed), а не объектом. */
+export async function updateUserRole(id: number, roleId: number): Promise<void> {
+  await api.post(`/users/${id}/role`, roleId);
+}
+
+/** DELETE /user/{id} — удалить аккаунт. Требуется пароль удаляемого аккаунта
+ *  (или права администратора). */
+export async function deleteAccount(id: number, password: string): Promise<void> {
+  await api.delete(`/user/${id}`, { data: { password } });
 }

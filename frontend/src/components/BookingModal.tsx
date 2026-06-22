@@ -17,6 +17,9 @@ interface BookingModalProps {
   date: string;
   /** Предзаполненный интервал (час, на который кликнули). */
   init: TimeRange;
+  /** Если задан — организатор зафиксирован на этом сотруднике (нет права
+   *  бронировать за других); выбор сотрудника не показывается. */
+  lockedEmployee?: Employee | null;
   /** Закрыть окно без сохранения. */
   onClose: () => void;
   /** Отправить заполненную бронь на создание. */
@@ -24,10 +27,10 @@ interface BookingModalProps {
 }
 
 /** Форма создания новой брони. */
-export function BookingModal({ employees, date, init, onClose, onSubmit }: BookingModalProps) {
+export function BookingModal({ employees, date, init, lockedEmployee, onClose, onSubmit }: BookingModalProps) {
   const [topic, setTopic] = useState("");
-  // По умолчанию выбран первый сотрудник из справочника (0, если список пуст).
-  const [empId, setEmpId] = useState<number>(employees[0]?.id ?? 0);
+  // Организатор: при ограничении — фиксированный сотрудник, иначе первый из справочника.
+  const [empId, setEmpId] = useState<number>(lockedEmployee?.id ?? employees[0]?.id ?? 0);
   const [start, setStart] = useState(fmt(init.startH, init.startM));
   const [end, setEnd] = useState(fmt(init.endH, init.endM));
   // Текст ошибки клиентской валидации.
@@ -68,18 +71,28 @@ export function BookingModal({ employees, date, init, onClose, onSubmit }: Booki
           </div>
           <div>
             <label>Сотрудник</label>
-            <select
-              className="input"
-              style={{ width: "100%" }}
-              value={empId}
-              onChange={(e) => setEmpId(+e.target.value)}
-            >
-              {employees.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                </option>
-              ))}
-            </select>
+            {lockedEmployee ? (
+              // Нет права бронировать за других — организатор только текущий пользователь.
+              <input
+                className="input"
+                style={{ width: "100%" }}
+                value={lockedEmployee.name}
+                disabled
+              />
+            ) : (
+              <select
+                className="input"
+                style={{ width: "100%" }}
+                value={empId}
+                onChange={(e) => setEmpId(+e.target.value)}
+              >
+                {employees.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1 }}>

@@ -332,3 +332,64 @@ body {
   max-width: 1120px; margin: 0 auto 24px; padding: 10px 20px;
   color: var(--muted); font-size: 12px;
 }
+
+/* ---------- Аватары в матрице ---------- */
+.emp-ident { display: flex; align-items: center; gap: 10px; }
+.emp-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  flex: none; object-fit: cover; border: 1px solid #eee;
+}
+.emp-avatar--initials {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--primary); color: #fff;
+  font-size: 13px; font-weight: 600;
+}
+
+/* ---------- Аккаунт ---------- */
+.account-form { display: flex; flex-direction: column; gap: 14px; max-width: 420px; }
+.account-row { display: flex; align-items: center; gap: 10px; }
+.account-label { color: var(--muted); font-size: 13px; min-width: 80px; }
+.account-value { font-weight: 600; }
+.account-note { color: var(--muted); font-size: 13px; }
+.account-photo { display: flex; align-items: center; gap: 12px; }
+.account-photo .emp-avatar { width: 56px; height: 56px; font-size: 18px; }
+.account-photo .input { flex: 1; }
+.account-danger { display: flex; flex-direction: column; gap: 14px; max-width: 420px; border: 1px solid #f3c2c2; }
+.account-danger .profile-section-title { color: var(--danger); }
+
+/* ---------- Список сотрудников ---------- */
+.emp-list { list-style: none; margin: 0; padding: 0; }
+.emp-list-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; cursor: pointer; border-bottom: 1px solid #eef0f2;
+}
+.emp-list-item:last-child { border-bottom: none; }
+.emp-list-item:hover { background: #f5f8ff; }
+.emp-list-info { flex: 1; min-width: 0; }
+.emp-list-info .name { font-weight: 600; }
+.emp-list-info .pos { color: var(--muted); font-size: 13px; }
+.emp-list-go { color: var(--muted); font-size: 20px; }
+
+/* ---------- Комбобокс с подсказками (выбор пользователя) ---------- */
+.combo { position: relative; }
+.combo .input { width: 100%; }
+.combo-list {
+  position: absolute; z-index: 40; top: calc(100% + 2px); left: 0; right: 0;
+  max-height: 240px; overflow-y: auto; margin: 0; padding: 4px; list-style: none;
+  background: #fff; border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.12);
+}
+.combo-list li { padding: 7px 10px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+.combo-list li:hover, .combo-list li.active { background: #f5f8ff; }
+
+/* ---------- Фиксы отображения/наложения ---------- */
+/* Длинное ФИО не должно наезжать на кнопки действий в матрице. */
+.emp-ident { min-width: 0; }
+/* Кликабельный сотрудник в матрице — переход в профиль. */
+.emp-ident--clickable { cursor: pointer; }
+.emp-ident--clickable:hover .name { color: var(--primary); text-decoration: underline; }
+.emp-ident > div { min-width: 0; }
+.matrix .emp .name,
+.emp-list-info .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Поповер последнего столбца прижимаем к правому краю, чтобы не вылезал. */
+.matrix td:last-child .popover { left: auto; right: 0; transform: none; }

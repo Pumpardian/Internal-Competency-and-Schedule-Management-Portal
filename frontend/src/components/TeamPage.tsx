@@ -7,13 +7,11 @@
  * Кнопки добавления создают сотрудника и навык через REST API.
  */
 import { useState } from "react";
-import { HEAT, HEAT_TEXT } from "../data";
+import { CATEGORY_LABEL, HEAT, HEAT_TEXT, SKILL_CATEGORIES } from "../data";
+import { useAccess } from "../hooks/useAccess";
 import type { Employee, Levels, Skill, ToastInput } from "../types";
 import { EntityModal, type FormField } from "./EntityModal";
 import { LevelPopover } from "./LevelPopover";
-
-/** Допустимые категории навыков (см. backend models.skill_categories). */
-const SKILL_CATEGORIES = ["language", "database", "framework", "library", "tool", "other"];
 
 /** Какая модальная форма открыта (или null — закрыта). */
 type ModalState =
@@ -114,6 +112,8 @@ interface TeamPageProps {
   onRemoveSkill: (id: number) => Promise<void>;
   /** Снять навык у сотрудника. */
   onRemoveSkillFromEmployee: (empId: number, skillId: number) => Promise<void>;
+  /** Открыть профиль сотрудника (по клику на него в матрице). */
+  onOpenEmployee: (id: number) => void;
   /** Текущая страница сотрудников (строки). */
   employeePage: number;
   /** Всего страниц сотрудников. */
@@ -139,6 +139,14 @@ interface EditingCell {
 /** Извлекает текст ошибки из произвольного исключения. */
 function errMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
+}
+
+/** Инициалы для аватара-заглушки, напр. «Петров Сергей» → «ПС». */
+function initials(emp: Employee): string {
+  return [emp.lastName, emp.firstName]
+    .map((part) => part.trim()[0] ?? "")
+    .join("")
+    .toUpperCase();
 }
 
 /** Постраничная навигация «‹ N / M ›». Скрывается, если страница всего одна. */
@@ -196,6 +204,7 @@ export function TeamPage({
   onEditSkill,
   onRemoveSkill,
   onRemoveSkillFromEmployee,
+  onOpenEmployee,
   employeePage,
   employeeTotalPages,
   onEmployeePage,
@@ -215,12 +224,28 @@ export function TeamPage({
   } | null>(null);
   // Строка поиска по сотрудникам.
   const [search, setSearch] = useState("");
+  // Направление сортировки сотрудников по ФИО.
+  const [sortDir, setSortDir] = useState<"az" | "za">("az");
+
+  // Права текущего пользователя — какие изменения матрицы ему доступны.
+  const { can } = useAccess();
+  const canAddEmployee = can("employee.create");
+  const canAddSkill = can("skill.create");
+  const canEditEmployee = can("employee.update");
+  const canDeleteEmployee = can("employee.delete");
+  const canEditSkill = can("skill.update");
+  const canDeleteSkill = can("skill.delete");
+  const canEditLevels = can("employee_skill.create") || can("employee_skill.update");
+  const canRemoveLevel = can("employee_skill.delete");
 
   // Фильтрация сотрудников по подстроке имени (регистронезависимо).
-  // Поиск работает в пределах текущей страницы (бэкенд поиск не поддерживает).
-  const filtered = employees.filter((e) =>
-    e.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  // Поиск и сортировка работают в пределах текущей страницы (бэкенд их не поддерживает).
+  const filtered = employees
+    .filter((e) => e.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      const cmp = a.name.localeCompare(b.name, "ru");
+      return sortDir === "az" ? cmp : -cmp;
+    });
 
   /** Сохранить уровень на сервере и показать результат. */
   const commitLevel = async (emp: Employee, skill: Skill, value: number) => {
@@ -258,10 +283,12 @@ export function TeamPage({
         push({ title: "Сотрудник обновлён", msg: values.lastName + " " + values.firstName });
       } else if (modal.kind === "addSkill") {
         await onAddSkill(values.name.trim(), values.category);
-        push({ title: "Навык добавлен", msg: values.name + " · " + values.category });
+        const cat = CATEGORY_LABEL[values.category] ?? values.category;
+        push({ title: "Навык добавлен", msg: values.name + " · " + cat });
       } else if (modal.kind === "editSkill") {
         await onEditSkill(modal.skill.id, values.name.trim(), values.category);
-        push({ title: "Навык обновлён", msg: values.name + " · " + values.category });
+        const cat = CATEGORY_LABEL[values.category] ?? values.category;
+        push({ title: "Навык обновлён", msg: values.name + " · " + cat });
       }
       setModal(null);
     } catch (e) {
@@ -322,12 +349,16 @@ export function TeamPage({
       </p>
 
       <div className="toolbar">
-        <button className="btn primary" onClick={handleAddEmployee}>
-          + Добавить сотрудника
-        </button>
-        <button className="btn" onClick={handleAddSkill}>
-          + Добавить навык
-        </button>
+        {canAddEmployee && (
+          <button className="btn primary" onClick={handleAddEmployee}>
+            + Добавить сотрудника
+          </button>
+        )}
+        {canAddSkill && (
+          <button className="btn" onClick={handleAddSkill}>
+            + Добавить навык
+          </button>
+        )}
         <button className="btn" onClick={onReload}>
           Обновить
         </button>
@@ -337,6 +368,15 @@ export function TeamPage({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <select
+          className="input"
+          value={sortDir}
+          onChange={(e) => setSortDir(e.target.value as "az" | "za")}
+          aria-label="Сортировка сотрудников"
+        >
+          <option value="az">ФИО: А → Я</option>
+          <option value="za">ФИО: Я → А</option>
+        </select>
       </div>
 
       {/* Состояния загрузки и ошибки соединения с бэкендом. */}
@@ -372,23 +412,31 @@ export function TeamPage({
                 {skills.map((s) => (
                   <th key={s.id}>
                     {s.name}
-                    <div style={{ fontWeight: 400, fontSize: 11, color: "#999" }}>{s.category}</div>
-                    <div className="hdr-actions">
-                      <button
-                        className="icon-btn"
-                        title="Изменить навык"
-                        onClick={() => handleEditSkill(s)}
-                      >
-                        ✎
-                      </button>
-                      <button
-                        className="icon-btn danger"
-                        title="Удалить навык"
-                        onClick={() => handleRemoveSkill(s)}
-                      >
-                        ✕
-                      </button>
+                    <div style={{ fontWeight: 400, fontSize: 11, color: "#999" }}>
+                      {CATEGORY_LABEL[s.category] ?? s.category}
                     </div>
+                    {(canEditSkill || canDeleteSkill) && (
+                      <div className="hdr-actions">
+                        {canEditSkill && (
+                          <button
+                            className="icon-btn"
+                            title="Изменить навык"
+                            onClick={() => handleEditSkill(s)}
+                          >
+                            ✎
+                          </button>
+                        )}
+                        {canDeleteSkill && (
+                          <button
+                            className="icon-btn danger"
+                            title="Удалить навык"
+                            onClick={() => handleRemoveSkill(s)}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </th>
                 ))}
               </tr>
@@ -398,26 +446,43 @@ export function TeamPage({
                 <tr key={emp.id}>
                   <td className="emp">
                     <div className="emp-row">
-                      <div>
-                        <div className="name">{emp.name}</div>
-                        <div className="pos">{emp.position}</div>
+                      <div
+                        className="emp-ident emp-ident--clickable"
+                        onClick={() => onOpenEmployee(emp.id)}
+                        title="Открыть профиль"
+                      >
+                        {emp.photoUrl ? (
+                          <img className="emp-avatar" src={emp.photoUrl} alt={emp.name} />
+                        ) : (
+                          <div className="emp-avatar emp-avatar--initials">{initials(emp)}</div>
+                        )}
+                        <div>
+                          <div className="name">{emp.name}</div>
+                          <div className="pos">{emp.position}</div>
+                        </div>
                       </div>
-                      <div className="hdr-actions">
-                        <button
-                          className="icon-btn"
-                          title="Изменить сотрудника"
-                          onClick={() => handleEditEmployee(emp)}
-                        >
-                          ✎
-                        </button>
-                        <button
-                          className="icon-btn danger"
-                          title="Удалить сотрудника"
-                          onClick={() => handleRemoveEmployee(emp)}
-                        >
-                          ✕
-                        </button>
-                      </div>
+                      {(canEditEmployee || canDeleteEmployee) && (
+                        <div className="hdr-actions">
+                          {canEditEmployee && (
+                            <button
+                              className="icon-btn"
+                              title="Изменить сотрудника"
+                              onClick={() => handleEditEmployee(emp)}
+                            >
+                              ✎
+                            </button>
+                          )}
+                          {canDeleteEmployee && (
+                            <button
+                              className="icon-btn danger"
+                              title="Удалить сотрудника"
+                              onClick={() => handleRemoveEmployee(emp)}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </td>
                   {skills.map((s) => {
@@ -432,10 +497,17 @@ export function TeamPage({
                         key={s.id}
                         className="cell"
                         // Цвет фона и текста берём из тепловой карты по уровню.
-                        style={{ background: HEAT[lvl], color: HEAT_TEXT[lvl] }}
-                        // Клик переключает редактирование этой ячейки.
-                        onClick={() =>
-                          setEditing(isEditing ? null : { empId: emp.id, skillId: s.id })
+                        // Курсор-указатель только если уровни можно менять.
+                        style={{
+                          background: HEAT[lvl],
+                          color: HEAT_TEXT[lvl],
+                          cursor: canEditLevels ? "pointer" : "default",
+                        }}
+                        // Клик переключает редактирование этой ячейки (если есть право).
+                        onClick={
+                          canEditLevels
+                            ? () => setEditing(isEditing ? null : { empId: emp.id, skillId: s.id })
+                            : undefined
                         }
                       >
                         <span className="lvl">{lvl}</span>
@@ -444,7 +516,7 @@ export function TeamPage({
                             emp={emp}
                             skill={s}
                             value={lvl}
-                            canRemove={isAssigned}
+                            canRemove={isAssigned && canRemoveLevel}
                             onRemove={() => {
                               setEditing(null);
                               void commitRemoveSkill(emp, s);

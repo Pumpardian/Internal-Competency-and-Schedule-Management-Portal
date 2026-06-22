@@ -11,7 +11,7 @@ from math import ceil
 
 from utils.upload import save_employee_photo, delete_employee_photo
 from models import Employee
-from dependencies import get_db
+from dependencies import get_db, get_logger
 from utils.auth import user_dependency, require_permission
 
 router = APIRouter()
@@ -231,6 +231,7 @@ async def add_employee(
     db.add(employee)
     db.commit()
     db.refresh(employee)
+    get_logger().info(f"Создан сотрудник (ID: {employee.id}) {employee.last_name} {employee.first_name} и позицией {employee.position}")
     return employee
 
 
@@ -312,13 +313,6 @@ async def update_employee(
                 detail=f"Сотрудник '{new_last_name} {new_first_name}' уже существует"
             )
     
-    if validated_data.first_name is not None:
-        employee.first_name = validated_data.first_name
-    if validated_data.last_name is not None:
-        employee.last_name = validated_data.last_name
-    if validated_data.position is not None:
-        employee.position = validated_data.position
-    
     photo_url = None
     if photo and photo.filename:
         try:
@@ -330,6 +324,16 @@ async def update_employee(
         except HTTPException as e:
             raise e
     
+    get_logger().info(f"Обновлен сотрудник (ID: {employee.id}) {employee.last_name} {employee.first_name} и позицией {employee.position} \
+                      на {validated_data.last_name} {validated_data.first_name} и позицией {validated_data.position}")
+    
+    if validated_data.first_name is not None:
+        employee.first_name = validated_data.first_name
+    if validated_data.last_name is not None:
+        employee.last_name = validated_data.last_name
+    if validated_data.position is not None:
+        employee.position = validated_data.position
+
     db.commit()
     db.refresh(employee)
     return employee
@@ -376,4 +380,5 @@ def delete_employee(
     if photo_url:
         delete_employee_photo(photo_url)
 
+    get_logger().info(f"Удален сотрудник (ID: {employee.id}) {employee.last_name} {employee.first_name} и позицией {employee.position}")
     return {"message": "Сотрудник успешно удален"}
