@@ -72,15 +72,21 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
   const myId = me?.id;
   const isAdmin = role?.name === "admin";
 
-  // Фильтр пользователей по ФИО или логину (для выпадающего списка смены роли).
-  const userQuery = userSearch.trim().toLowerCase();
-  const filteredUsers = userQuery
-    ? users.filter(
-        (u) =>
-          (u.full_name ?? "").toLowerCase().includes(userQuery) ||
-          u.username.toLowerCase().includes(userQuery),
-      )
-    : users;
+  // Фильтр пользователей по словам в любом порядке: «сер поп» найдёт «Попов
+  // Сергей». Каждое слово запроса должно встречаться в ФИО или логине.
+  const userTokens = userSearch
+    .toLowerCase()
+    .replace(/[()]/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const filteredUsers =
+    userTokens.length === 0
+      ? users
+      : users.filter((u) => {
+          const haystack = `${u.full_name ?? ""} ${u.username}`.toLowerCase();
+          return userTokens.every((t) => haystack.includes(t));
+        });
 
   // Превью аватара: только что выбранный файл, иначе текущее сохранённое фото.
   const photoPreview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
