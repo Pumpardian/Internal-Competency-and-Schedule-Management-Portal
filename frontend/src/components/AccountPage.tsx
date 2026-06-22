@@ -347,7 +347,7 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
             <div className="combo">
               <input
                 className="input"
-                placeholder="Имя или логин… (нажмите для списка)"
+                placeholder="Имя или логин…"
                 value={userSearch}
                 onChange={(e) => {
                   setUserSearch(e.target.value);
