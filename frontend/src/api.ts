@@ -369,6 +369,20 @@ export async function fetchRolePermissions(roleId: number): Promise<string[]> {
   return data.map((p) => p.name);
 }
 
+/** Пользователь в списке (для выбора при смене роли). */
+export interface ApiUserListItem {
+  id: number;
+  username: string;
+  full_name: string | null;
+}
+
+/** GET /users — список пользователей (id, логин, ФИО). Доступен при праве
+ *  user_role.update — используется для выбора пользователя при смене роли. */
+export async function fetchUsers(): Promise<ApiUserListItem[]> {
+  const { data } = await api.get<ApiUserListItem[]>("/users");
+  return data;
+}
+
 /** Изменяемые поля профиля сотрудника (все опциональны). */
 export interface ProfileEmployeeUpdate {
   first_name?: string;

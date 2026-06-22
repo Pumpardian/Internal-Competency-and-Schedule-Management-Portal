@@ -28,6 +28,12 @@ export function Header({ page, setPage, username, onLogout }: HeaderProps) {
         <button className={page === "room" ? "active" : ""} onClick={() => setPage("room")}>
           Переговорная
         </button>
+        <button
+          className={page === "employees" ? "active" : ""}
+          onClick={() => setPage("employees")}
+        >
+          Сотрудники
+        </button>
         <button className={page === "profile" ? "active" : ""} onClick={() => setPage("profile")}>
           Профиль
         </button>

@@ -9,6 +9,8 @@
 import { useState } from "react";
 import { currentUser } from "../api";
 import { AccountPage } from "./AccountPage";
+import { EmployeeCard } from "./EmployeeCard";
+import { EmployeesPage } from "./EmployeesPage";
 import { Header } from "./Header";
 import { ProfilePage } from "./ProfilePage";
 import { RoomPage } from "./RoomPage";
@@ -27,6 +29,13 @@ interface PortalProps {
 export function Portal({ onLogout }: PortalProps) {
   // Активная страница.
   const [page, setPage] = useState<Page>("team");
+  // Открытый профиль сотрудника (по клику из матрицы); null — обычные страницы.
+  const [profileEmpId, setProfileEmpId] = useState<number | null>(null);
+  // Переход по вкладкам сбрасывает открытый профиль.
+  const goTo = (p: Page) => {
+    setProfileEmpId(null);
+    setPage(p);
+  };
   // Текущий пользователь из токена (для шапки).
   const username = currentUser()?.username ?? "";
   // Матрица компетенций с бэкенда.
@@ -56,36 +65,52 @@ export function Portal({ onLogout }: PortalProps) {
 
   return (
     <>
-      <Header page={page} setPage={setPage} username={username} onLogout={onLogout} />
-      {/* Простейший «роутинг» переключением по состоянию page. */}
-      {page === "team" && (
-        <TeamPage
-          employees={employees}
-          skills={skills}
-          levels={levels}
-          loading={loading}
-          error={error}
-          onReload={reload}
-          onSetLevel={setLevel}
-          onAddEmployee={addEmployee}
-          onAddSkill={addSkill}
-          onEditEmployee={editEmployee}
-          onRemoveEmployee={removeEmployee}
-          onEditSkill={editSkill}
-          onRemoveSkill={removeSkill}
-          onRemoveSkillFromEmployee={removeSkillFromEmployee}
-          employeePage={employeePage}
-          employeeTotalPages={employeeTotalPages}
-          onEmployeePage={setEmployeePage}
-          skillPage={skillPage}
-          skillTotalPages={skillTotalPages}
-          onSkillPage={setSkillPage}
-          push={push}
-        />
+      <Header page={page} setPage={goTo} username={username} onLogout={onLogout} />
+      {/* Открытый профиль сотрудника (из матрицы) поверх обычных страниц. */}
+      {profileEmpId !== null ? (
+        <div className="page">
+          <button className="btn" onClick={() => setProfileEmpId(null)}>
+            ← Назад
+          </button>
+          <div style={{ marginTop: 16 }}>
+            <EmployeeCard employeeId={profileEmpId} />
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Простейший «роутинг» переключением по состоянию page. */}
+          {page === "team" && (
+            <TeamPage
+              employees={employees}
+              skills={skills}
+              levels={levels}
+              loading={loading}
+              error={error}
+              onReload={reload}
+              onSetLevel={setLevel}
+              onAddEmployee={addEmployee}
+              onAddSkill={addSkill}
+              onEditEmployee={editEmployee}
+              onRemoveEmployee={removeEmployee}
+              onEditSkill={editSkill}
+              onRemoveSkill={removeSkill}
+              onRemoveSkillFromEmployee={removeSkillFromEmployee}
+              onOpenEmployee={setProfileEmpId}
+              employeePage={employeePage}
+              employeeTotalPages={employeeTotalPages}
+              onEmployeePage={setEmployeePage}
+              skillPage={skillPage}
+              skillTotalPages={skillTotalPages}
+              onSkillPage={setSkillPage}
+              push={push}
+            />
+          )}
+          {page === "room" && <RoomPage employees={employees} push={push} />}
+          {page === "employees" && <EmployeesPage />}
+          {page === "profile" && <ProfilePage />}
+          {page === "account" && <AccountPage push={push} onLogout={onLogout} />}
+        </>
       )}
-      {page === "room" && <RoomPage employees={employees} push={push} />}
-      {page === "profile" && <ProfilePage employees={employees} />}
-      {page === "account" && <AccountPage push={push} onLogout={onLogout} />}
       <Toasts toasts={toasts} />
     </>
   );

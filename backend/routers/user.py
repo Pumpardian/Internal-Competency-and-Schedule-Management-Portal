@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
 from pydantic import BaseModel, Field
 from datetime import timedelta
-from typing import Annotated, Optional
+from typing import Annotated, List, Optional
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import datetime
 
@@ -50,6 +50,12 @@ class UserProfileUpdateRequest(BaseModel):
 class UserProfileUpdateResponse(BaseModel):
     """Модель ответа при изменении профиля пользователя"""
     message: str = Field(..., description="Сообщение об операции", examples=["Профиль пользователя ivanov_ivan успешно обновлен"])
+
+class UserListItem(BaseModel):
+    """Элемент списка пользователей (для выбора при смене роли)"""
+    id: int = Field(..., description="Уникальный идентификатор пользователя", examples=[1])
+    username: str = Field(..., description="Имя пользователя (логин)", examples=["ivanov1"])
+    full_name: Optional[str] = Field(None, description="ФИО привязанного сотрудника, если есть", examples=["Иванов Иван"])
 
 
 #Эндпоинты
@@ -260,7 +266,42 @@ def delete_account(
 
 
 @router.get(
-    "/users/{id}/role", 
+    "/users",
+    response_class=JSONResponse,
+    response_model=List[UserListItem],
+    summary="Список пользователей",
+    responses={
+        200: {"description": "Список пользователей", "model": List[UserListItem]},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
+    }
+)
+def list_users(
+    user: dict = Depends(require_permission("user_role.update")),
+    db: Session = Depends(get_db)
+):
+    '''
+    Список всех пользователей (id, логин, ФИО сотрудника).
+
+    Доступен тем, кто может менять роли (право user_role.update). Используется
+    интерфейсом для выбора пользователя при смене роли.
+
+    Возвращает список пользователей.
+    '''
+
+    users = db.execute(select(User).order_by(User.username)).scalars().all()
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "full_name": f"{u.employee.last_name} {u.employee.first_name}".strip() if u.employee else None,
+        }
+        for u in users
+    ]
+
+
+@router.get(
+    "/users/{id}/role",
     response_class=JSONResponse,
     response_model=RoleResponse,
     summary="Получить роль пользователя",

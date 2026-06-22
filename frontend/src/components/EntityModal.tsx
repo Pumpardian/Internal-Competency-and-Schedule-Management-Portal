@@ -17,8 +17,8 @@ export interface FormField {
   value: string;
   /** Тип поля: обычный ввод или выпадающий список. */
   type?: "text" | "select";
-  /** Варианты для select. */
-  options?: string[];
+  /** Варианты для select: строка (значение=подпись) или {value, label}. */
+  options?: Array<string | { value: string; label: string }>;
   /** Обязательно к заполнению. */
   required?: boolean;
   /** Подсказка в пустом поле. */
@@ -77,11 +77,15 @@ export function EntityModal({ title, fields, submitLabel, onClose, onSubmit }: E
                   value={values[f.name]}
                   onChange={(e) => setField(f.name, e.target.value)}
                 >
-                  {(f.options ?? []).map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
+                  {(f.options ?? []).map((o) => {
+                    const value = typeof o === "string" ? o : o.value;
+                    const label = typeof o === "string" ? o : o.label;
+                    return (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    );
+                  })}
                 </select>
               ) : (
                 <input
