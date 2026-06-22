@@ -356,3 +356,16 @@ body {
 .account-photo .input { flex: 1; }
 .account-danger { display: flex; flex-direction: column; gap: 14px; max-width: 420px; border: 1px solid #f3c2c2; }
 .account-danger .profile-section-title { color: var(--danger); }
+
+/* ---------- Список сотрудников ---------- */
+.emp-list { list-style: none; margin: 0; padding: 0; }
+.emp-list-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; cursor: pointer; border-bottom: 1px solid #eef0f2;
+}
+.emp-list-item:last-child { border-bottom: none; }
+.emp-list-item:hover { background: #f5f8ff; }
+.emp-list-info { flex: 1; min-width: 0; }
+.emp-list-info .name { font-weight: 600; }
+.emp-list-info .pos { color: var(--muted); font-size: 13px; }
+.emp-list-go { color: var(--muted); font-size: 20px; }
