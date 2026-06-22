@@ -84,7 +84,7 @@ export function Portal({ onLogout }: PortalProps) {
         />
       )}
       {page === "room" && <RoomPage employees={employees} push={push} />}
-      {page === "profile" && <ProfilePage employees={employees} />}
+      {page === "profile" && <ProfilePage />}
       {page === "account" && <AccountPage push={push} onLogout={onLogout} />}
       <Toasts toasts={toasts} />
     </>
