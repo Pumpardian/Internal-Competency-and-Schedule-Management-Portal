@@ -14,5 +14,5 @@ if [ -n "$DATABASE_URL" ]; then
     alembic upgrade head
 fi
 
-# Прод: без --reload, несколько воркеров
-exec uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+# Прод: без --reload, несколько воркеров, без подробных логов (во избежание засорения)
+exec uvicorn main:app --host 0.0.0.0 --port 8000 --log-level error --workers 4

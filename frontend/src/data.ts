@@ -14,6 +14,22 @@ export const HEAT = ["#ffffff", "#edf8e9", "#c7e9c0", "#74c476", "#41ab5d", "#00
 /** Цвета текста для контраста на фоне HEAT (индекс соответствует уровню). */
 export const HEAT_TEXT = ["#bbbbbb", "#1f1f1f", "#1f1f1f", "#ffffff", "#ffffff", "#ffffff"];
 
+/** Категории навыков: значение для бэкенда (англ., см. models.skill_categories)
+ *  и русская подпись для интерфейса. */
+export const SKILL_CATEGORIES: { value: string; label: string }[] = [
+  { value: "language", label: "Язык" },
+  { value: "database", label: "СУБД" },
+  { value: "framework", label: "Фреймворк" },
+  { value: "library", label: "Библиотека" },
+  { value: "tool", label: "Инструмент" },
+  { value: "other", label: "Другое" },
+];
+
+/** Английское значение категории → русская подпись. */
+export const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
+  SKILL_CATEGORIES.map((c) => [c.value, c.label]),
+);
+
 /** Начальный список броней переговорной (заглушка). */
 export const INITIAL_BOOKINGS: Booking[] = [
   { id: 1, topic: "Планёрка", empId: 1, startH: 9, startM: 0, endH: 10, endM: 0 },

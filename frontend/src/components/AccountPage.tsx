@@ -10,11 +10,13 @@ import {
   currentUser,
   deleteAccount,
   fetchRoles,
+  fetchUsers,
   getProfile,
   getRole,
   updateProfile,
   updateUserRole,
   type ApiRole,
+  type ApiUserListItem,
 } from "../api";
 import type { Employee, ToastInput } from "../types";
 
@@ -58,6 +60,10 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
   const [targetUserId, setTargetUserId] = useState("");
   const [targetRoleId, setTargetRoleId] = useState<number | "">("");
   const [changingRole, setChangingRole] = useState(false);
+  // Список пользователей, строка поиска и открытие подсказок (для выбора при смене роли).
+  const [users, setUsers] = useState<ApiUserListItem[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [comboOpen, setComboOpen] = useState(false);
 
   // Удаление аккаунта.
   const [deletePassword, setDeletePassword] = useState("");
@@ -65,6 +71,22 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
 
   const myId = me?.id;
   const isAdmin = role?.name === "admin";
+
+  // Фильтр пользователей по словам в любом порядке: «сер поп» найдёт «Попов
+  // Сергей». Каждое слово запроса должно встречаться в ФИО или логине.
+  const userTokens = userSearch
+    .toLowerCase()
+    .replace(/[()]/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const filteredUsers =
+    userTokens.length === 0
+      ? users
+      : users.filter((u) => {
+          const haystack = `${u.full_name ?? ""} ${u.username}`.toLowerCase();
+          return userTokens.every((t) => haystack.includes(t));
+        });
 
   // Превью аватара: только что выбранный файл, иначе текущее сохранённое фото.
   const photoPreview = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
@@ -126,6 +148,18 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
     };
   }, [isAdmin]);
 
+  // Список пользователей нужен только администратору — для выбора при смене роли.
+  useEffect(() => {
+    if (!isAdmin) return;
+    let active = true;
+    fetchUsers()
+      .then((us) => active && setUsers(us))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [isAdmin]);
+
   /** Сохранение изменений профиля (с подтверждением текущим паролем). */
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,9 +201,14 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
     setChangingRole(true);
     try {
       await updateUserRole(uid, Number(targetRoleId));
-      push({ title: "Роль изменена", msg: `Пользователь #${uid}` });
+      const picked = users.find((u) => u.id === uid);
+      push({
+        title: "Роль изменена",
+        msg: picked ? (picked.full_name ?? picked.username) : `Пользователь #${uid}`,
+      });
       setTargetUserId("");
       setTargetRoleId("");
+      setUserSearch("");
     } catch (err) {
       push({ type: "error", title: "Ошибка", msg: errMessage(err) });
     } finally {
@@ -310,15 +349,42 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
         <form className="card" style={{ marginTop: 16 }} onSubmit={handleChangeRole}>
           <div className="profile-section-title">Смена роли пользователя</div>
           <label className="auth-field">
-            <span>ID пользователя</span>
-            <input
-              className="input"
-              type="number"
-              min={1}
-              placeholder="Напр. 2"
-              value={targetUserId}
-              onChange={(e) => setTargetUserId(e.target.value)}
-            />
+            <span>Пользователь</span>
+            <div className="combo">
+              <input
+                className="input"
+                placeholder="Имя или логин…"
+                value={userSearch}
+                onChange={(e) => {
+                  setUserSearch(e.target.value);
+                  setTargetUserId(""); // ввод сбрасывает выбор — нужно выбрать из подсказок
+                  setComboOpen(true);
+                }}
+                onFocus={() => setComboOpen(true)}
+                onBlur={() => window.setTimeout(() => setComboOpen(false), 150)}
+              />
+              {comboOpen && filteredUsers.length > 0 && (
+                <ul className="combo-list">
+                  {filteredUsers.slice(0, 50).map((u) => {
+                    const label = u.full_name ? `${u.full_name} (${u.username})` : u.username;
+                    return (
+                      <li
+                        key={u.id}
+                        className={String(u.id) === targetUserId ? "active" : ""}
+                        // onMouseDown срабатывает до onBlur поля — выбор не теряется.
+                        onMouseDown={() => {
+                          setTargetUserId(String(u.id));
+                          setUserSearch(label);
+                          setComboOpen(false);
+                        }}
+                      >
+                        {label}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </label>
           <label className="auth-field">
             <span>Роль</span>

@@ -6,14 +6,14 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
 from pydantic import BaseModel, Field
 from datetime import timedelta
-from typing import Annotated, Optional
+from typing import Annotated, List, Optional
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import datetime
 
 from models import User, Employee, Role
 from routers.employees import EmployeeCreate, EmployeeUpdate, EmployeeResponse
 from routers.roles import RoleResponse
-from dependencies import get_db
+from dependencies import get_db, get_logger
 from utils.auth import create_access_token, authenticate_user \
 , argon2_context, user_dependency, require_permission
 from utils.upload import save_employee_photo, delete_employee_photo
@@ -50,6 +50,12 @@ class UserProfileUpdateRequest(BaseModel):
 class UserProfileUpdateResponse(BaseModel):
     """Модель ответа при изменении профиля пользователя"""
     message: str = Field(..., description="Сообщение об операции", examples=["Профиль пользователя ivanov_ivan успешно обновлен"])
+
+class UserListItem(BaseModel):
+    """Элемент списка пользователей (для выбора при смене роли)"""
+    id: int = Field(..., description="Уникальный идентификатор пользователя", examples=[1])
+    username: str = Field(..., description="Имя пользователя (логин)", examples=["ivanov1"])
+    full_name: Optional[str] = Field(None, description="ФИО привязанного сотрудника, если есть", examples=["Иванов Иван"])
 
 
 #Эндпоинты
@@ -115,6 +121,7 @@ async def register(
         hashed_password=argon2_context.hash(validated_data.password),
         role_id=request.app.state.default_role_id
     )
+    get_logger().info(f"Зарегистрирован пользователь (ID: {user.id}) с именем пользователя {user.username}")
     db.add(user)
     db.flush()
 
@@ -148,7 +155,8 @@ async def register(
                 employee.photo_url = photo_url
             except HTTPException as e:
                 raise e
-            
+        get_logger().info(f"Создан сотрудник (ID: {employee.id}) {employee.last_name} {employee.first_name} \
+                           и позицией {employee.position} для пользователя (ID: {user.id}) {user.username}")
         db.add(employee)
 
     db.commit()
@@ -246,16 +254,54 @@ def delete_account(
     if user.employee:
         photo_url = user.employee.photo_url
         db.delete(user.employee)
+        get_logger().info(f"Удален сотрудник (ID: {user.employee.id}) {user.employee.last_name} {user.employee.first_name} \
+                           и позицией {user.employee.position} пользователя (ID: {user.id}) {user.username}")
         if photo_url:
             delete_employee_photo(photo_url)
 
     db.delete(user)
     db.commit()
+    get_logger().info(f"Удален пользователь (ID: {user.id}) с именем пользователя {user.username}")
     return {"message": f"Пользователь {user.username} успешно удален"}
 
 
 @router.get(
-    "/users/{id}/role", 
+    "/users",
+    response_class=JSONResponse,
+    response_model=List[UserListItem],
+    summary="Список пользователей",
+    responses={
+        200: {"description": "Список пользователей", "model": List[UserListItem]},
+        401: {"description": "Не авторизован"},
+        403: {"description": "Недостаточно прав доступа"},
+    }
+)
+def list_users(
+    user: dict = Depends(require_permission("user_role.update")),
+    db: Session = Depends(get_db)
+):
+    '''
+    Список всех пользователей (id, логин, ФИО сотрудника).
+
+    Доступен тем, кто может менять роли (право user_role.update). Используется
+    интерфейсом для выбора пользователя при смене роли.
+
+    Возвращает список пользователей.
+    '''
+
+    users = db.execute(select(User).order_by(User.username)).scalars().all()
+    return [
+        {
+            "id": u.id,
+            "username": u.username,
+            "full_name": f"{u.employee.last_name} {u.employee.first_name}".strip() if u.employee else None,
+        }
+        for u in users
+    ]
+
+
+@router.get(
+    "/users/{id}/role",
     response_class=JSONResponse,
     response_model=RoleResponse,
     summary="Получить роль пользователя",
@@ -341,6 +387,8 @@ def update_user_role(
 
     user.role_id = role.id
     db.commit()
+    get_logger().info(f"Обновлена роль пользователя (ID: {user.id}) с {user.role_id} на \
+                        {role.id} {role.name}")
     return {"message": f"Роль пользователя {user.username} изменена на {role.name}"}
 
 
@@ -402,7 +450,7 @@ async def update_user_profile(
         )
 
     statement = select(User).where(User.id == id)
-    user = db.execute(statement).scalar_one_or_none()
+    user: User = db.execute(statement).scalar_one_or_none()
     if not user:
         raise HTTPException(
             status_code=404,
@@ -423,6 +471,7 @@ async def update_user_profile(
             )
         
         user.hashed_password = argon2_context.hash(validated_data.new_password)
+        get_logger().info(f"Обновлен пароль сотрудника (ID: {user.id}) {user.username}")
 
     if validated_data.employee_data:
         if not user.employee:
@@ -448,13 +497,6 @@ async def update_user_profile(
                     status_code=409,
                     detail=f"Сотрудник '{new_last_name} {new_first_name}' уже существует"
                 )
-        
-        if validated_data.employee_data.first_name is not None:
-            user.employee.first_name = validated_data.employee_data.first_name
-        if validated_data.employee_data.last_name is not None:
-            user.employee.last_name = validated_data.employee_data.last_name
-        if validated_data.employee_data.position is not None:
-            user.employee.position = validated_data.employee_data.position
 
         photo_url = None
         if photo and photo.filename:
@@ -467,6 +509,17 @@ async def update_user_profile(
                     delete_employee_photo(old_photo_url)
             except HTTPException as e:
                 raise e
+            
+        get_logger().info(f"Обновлен сотрудник (ID: {user.employee.id}) {user.employee.last_name} {user.employee.first_name} \
+                           и позицией {user.employee.position} для пользователя (ID: {user.id}) {user.username} \
+                           на {validated_data.last_name} {validated_data.first_name} и позицией {validated_data.position}")
+        
+        if validated_data.employee_data.first_name is not None:
+            user.employee.first_name = validated_data.employee_data.first_name
+        if validated_data.employee_data.last_name is not None:
+            user.employee.last_name = validated_data.employee_data.last_name
+        if validated_data.employee_data.position is not None:
+            user.employee.position = validated_data.employee_data.position
     
     db.commit()
     return {"message": f"Профиль пользователя {user.username} успешно обновлен"}
@@ -505,5 +558,4 @@ def get_user_profile(
             detail="Пользователь не найден"
         )
 
-    # Может быть None, если к аккаунту не привязан сотрудник — это валидный ответ.
     return user.employee

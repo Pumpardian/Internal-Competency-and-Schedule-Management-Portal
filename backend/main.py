@@ -7,7 +7,6 @@ from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 import os
 
-
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 employees_dir = os.path.join(static_dir, "employees")
 
@@ -25,7 +24,10 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    lifespan=lifespan
+    lifespan=lifespan,
+    title="Внутренний портал управления компетенциями и расписанием",
+    description="API для реализации управления компетенциями и расписания переговорной с правами доступа",
+    version="1.0.0"
 )
 
 

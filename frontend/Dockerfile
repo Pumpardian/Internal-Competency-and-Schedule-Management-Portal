@@ -1,20 +1,13 @@
-# Сборка SPA
-FROM node:22-alpine AS build
+FROM node:22-alpine
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+
 RUN npm ci
 
 COPY . .
-# В проде фронт ходит на бэкенд через тот же nginx — относительный путь /api
-ENV VITE_API_BASE=/api
-RUN npm run build
 
-# Отдача статики через nginx + проксирование API
-FROM nginx:alpine
+EXPOSE 5173
 
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.prod.conf /etc/nginx/nginx.conf
-
-EXPOSE 80
+CMD ["npx", "vite", "--host"]

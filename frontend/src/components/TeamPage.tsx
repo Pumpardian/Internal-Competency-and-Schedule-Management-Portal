@@ -7,14 +7,11 @@
  * Кнопки добавления создают сотрудника и навык через REST API.
  */
 import { useState } from "react";
-import { HEAT, HEAT_TEXT } from "../data";
+import { CATEGORY_LABEL, HEAT, HEAT_TEXT, SKILL_CATEGORIES } from "../data";
 import { useAccess } from "../hooks/useAccess";
 import type { Employee, Levels, Skill, ToastInput } from "../types";
 import { EntityModal, type FormField } from "./EntityModal";
 import { LevelPopover } from "./LevelPopover";
-
-/** Допустимые категории навыков (см. backend models.skill_categories). */
-const SKILL_CATEGORIES = ["language", "database", "framework", "library", "tool", "other"];
 
 /** Какая модальная форма открыта (или null — закрыта). */
 type ModalState =
@@ -115,6 +112,8 @@ interface TeamPageProps {
   onRemoveSkill: (id: number) => Promise<void>;
   /** Снять навык у сотрудника. */
   onRemoveSkillFromEmployee: (empId: number, skillId: number) => Promise<void>;
+  /** Открыть профиль сотрудника (по клику на него в матрице). */
+  onOpenEmployee: (id: number) => void;
   /** Текущая страница сотрудников (строки). */
   employeePage: number;
   /** Всего страниц сотрудников. */
@@ -205,6 +204,7 @@ export function TeamPage({
   onEditSkill,
   onRemoveSkill,
   onRemoveSkillFromEmployee,
+  onOpenEmployee,
   employeePage,
   employeeTotalPages,
   onEmployeePage,
@@ -224,6 +224,8 @@ export function TeamPage({
   } | null>(null);
   // Строка поиска по сотрудникам.
   const [search, setSearch] = useState("");
+  // Направление сортировки сотрудников по ФИО.
+  const [sortDir, setSortDir] = useState<"az" | "za">("az");
 
   // Права текущего пользователя — какие изменения матрицы ему доступны.
   const { can } = useAccess();
@@ -237,10 +239,13 @@ export function TeamPage({
   const canRemoveLevel = can("employee_skill.delete");
 
   // Фильтрация сотрудников по подстроке имени (регистронезависимо).
-  // Поиск работает в пределах текущей страницы (бэкенд поиск не поддерживает).
-  const filtered = employees.filter((e) =>
-    e.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  // Поиск и сортировка работают в пределах текущей страницы (бэкенд их не поддерживает).
+  const filtered = employees
+    .filter((e) => e.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      const cmp = a.name.localeCompare(b.name, "ru");
+      return sortDir === "az" ? cmp : -cmp;
+    });
 
   /** Сохранить уровень на сервере и показать результат. */
   const commitLevel = async (emp: Employee, skill: Skill, value: number) => {
@@ -278,10 +283,12 @@ export function TeamPage({
         push({ title: "Сотрудник обновлён", msg: values.lastName + " " + values.firstName });
       } else if (modal.kind === "addSkill") {
         await onAddSkill(values.name.trim(), values.category);
-        push({ title: "Навык добавлен", msg: values.name + " · " + values.category });
+        const cat = CATEGORY_LABEL[values.category] ?? values.category;
+        push({ title: "Навык добавлен", msg: values.name + " · " + cat });
       } else if (modal.kind === "editSkill") {
         await onEditSkill(modal.skill.id, values.name.trim(), values.category);
-        push({ title: "Навык обновлён", msg: values.name + " · " + values.category });
+        const cat = CATEGORY_LABEL[values.category] ?? values.category;
+        push({ title: "Навык обновлён", msg: values.name + " · " + cat });
       }
       setModal(null);
     } catch (e) {
@@ -361,6 +368,15 @@ export function TeamPage({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <select
+          className="input"
+          value={sortDir}
+          onChange={(e) => setSortDir(e.target.value as "az" | "za")}
+          aria-label="Сортировка сотрудников"
+        >
+          <option value="az">ФИО: А → Я</option>
+          <option value="za">ФИО: Я → А</option>
+        </select>
       </div>
 
       {/* Состояния загрузки и ошибки соединения с бэкендом. */}
@@ -396,7 +412,9 @@ export function TeamPage({
                 {skills.map((s) => (
                   <th key={s.id}>
                     {s.name}
-                    <div style={{ fontWeight: 400, fontSize: 11, color: "#999" }}>{s.category}</div>
+                    <div style={{ fontWeight: 400, fontSize: 11, color: "#999" }}>
+                      {CATEGORY_LABEL[s.category] ?? s.category}
+                    </div>
                     {(canEditSkill || canDeleteSkill) && (
                       <div className="hdr-actions">
                         {canEditSkill && (
@@ -428,7 +446,11 @@ export function TeamPage({
                 <tr key={emp.id}>
                   <td className="emp">
                     <div className="emp-row">
-                      <div className="emp-ident">
+                      <div
+                        className="emp-ident emp-ident--clickable"
+                        onClick={() => onOpenEmployee(emp.id)}
+                        title="Открыть профиль"
+                      >
                         {emp.photoUrl ? (
                           <img className="emp-avatar" src={emp.photoUrl} alt={emp.name} />
                         ) : (
