@@ -112,6 +112,8 @@ interface TeamPageProps {
   onRemoveSkill: (id: number) => Promise<void>;
   /** Снять навык у сотрудника. */
   onRemoveSkillFromEmployee: (empId: number, skillId: number) => Promise<void>;
+  /** Открыть профиль сотрудника (по клику на него в матрице). */
+  onOpenEmployee: (id: number) => void;
   /** Текущая страница сотрудников (строки). */
   employeePage: number;
   /** Всего страниц сотрудников. */
@@ -202,6 +204,7 @@ export function TeamPage({
   onEditSkill,
   onRemoveSkill,
   onRemoveSkillFromEmployee,
+  onOpenEmployee,
   employeePage,
   employeeTotalPages,
   onEmployeePage,
@@ -443,7 +446,11 @@ export function TeamPage({
                 <tr key={emp.id}>
                   <td className="emp">
                     <div className="emp-row">
-                      <div className="emp-ident">
+                      <div
+                        className="emp-ident emp-ident--clickable"
+                        onClick={() => onOpenEmployee(emp.id)}
+                        title="Открыть профиль"
+                      >
                         {emp.photoUrl ? (
                           <img className="emp-avatar" src={emp.photoUrl} alt={emp.name} />
                         ) : (

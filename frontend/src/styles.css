@@ -385,6 +385,9 @@ body {
 /* ---------- Фиксы отображения/наложения ---------- */
 /* Длинное ФИО не должно наезжать на кнопки действий в матрице. */
 .emp-ident { min-width: 0; }
+/* Кликабельный сотрудник в матрице — переход в профиль. */
+.emp-ident--clickable { cursor: pointer; }
+.emp-ident--clickable:hover .name { color: var(--primary); text-decoration: underline; }
 .emp-ident > div { min-width: 0; }
 .matrix .emp .name,
 .emp-list-info .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
