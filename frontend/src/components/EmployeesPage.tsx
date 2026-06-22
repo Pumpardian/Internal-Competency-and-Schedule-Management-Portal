@@ -86,6 +86,7 @@ export function EmployeesPage() {
       <div className="toolbar">
         <input
           className="input search"
+          style={{ marginLeft: 0 }}
           placeholder="Поиск по имени…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}

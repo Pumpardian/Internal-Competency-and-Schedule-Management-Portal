@@ -369,3 +369,12 @@ body {
 .emp-list-info .name { font-weight: 600; }
 .emp-list-info .pos { color: var(--muted); font-size: 13px; }
 .emp-list-go { color: var(--muted); font-size: 20px; }
+
+/* ---------- Фиксы отображения/наложения ---------- */
+/* Длинное ФИО не должно наезжать на кнопки действий в матрице. */
+.emp-ident { min-width: 0; }
+.emp-ident > div { min-width: 0; }
+.matrix .emp .name,
+.emp-list-info .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Поповер последнего столбца прижимаем к правому краю, чтобы не вылезал. */
+.matrix td:last-child .popover { left: auto; right: 0; transform: none; }
