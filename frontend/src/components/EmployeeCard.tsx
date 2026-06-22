@@ -5,19 +5,9 @@
  * Используется и на странице «Профиль» (свой профиль), и на странице
  * «Сотрудники» (просмотр выбранного сотрудника).
  */
-import { HEAT, HEAT_TEXT } from "../data";
+import { CATEGORY_LABEL, HEAT, HEAT_TEXT } from "../data";
 import { useProfile } from "../hooks/useProfile";
 import type { Employee } from "../types";
-
-/** Человекочитаемые названия категорий навыков. */
-const CATEGORY_LABEL: Record<string, string> = {
-  language: "Язык",
-  database: "СУБД",
-  framework: "Фреймворк",
-  library: "Библиотека",
-  tool: "Инструмент",
-  other: "Другое",
-};
 
 /** Инициалы для аватара-заглушки, напр. «Петров Сергей» → «ПС». */
 function initials(emp: Employee): string {

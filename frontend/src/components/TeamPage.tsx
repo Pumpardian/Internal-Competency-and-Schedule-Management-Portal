@@ -7,14 +7,11 @@
  * Кнопки добавления создают сотрудника и навык через REST API.
  */
 import { useState } from "react";
-import { HEAT, HEAT_TEXT } from "../data";
+import { CATEGORY_LABEL, HEAT, HEAT_TEXT, SKILL_CATEGORIES } from "../data";
 import { useAccess } from "../hooks/useAccess";
 import type { Employee, Levels, Skill, ToastInput } from "../types";
 import { EntityModal, type FormField } from "./EntityModal";
 import { LevelPopover } from "./LevelPopover";
-
-/** Допустимые категории навыков (см. backend models.skill_categories). */
-const SKILL_CATEGORIES = ["language", "database", "framework", "library", "tool", "other"];
 
 /** Какая модальная форма открыта (или null — закрыта). */
 type ModalState =
@@ -283,10 +280,12 @@ export function TeamPage({
         push({ title: "Сотрудник обновлён", msg: values.lastName + " " + values.firstName });
       } else if (modal.kind === "addSkill") {
         await onAddSkill(values.name.trim(), values.category);
-        push({ title: "Навык добавлен", msg: values.name + " · " + values.category });
+        const cat = CATEGORY_LABEL[values.category] ?? values.category;
+        push({ title: "Навык добавлен", msg: values.name + " · " + cat });
       } else if (modal.kind === "editSkill") {
         await onEditSkill(modal.skill.id, values.name.trim(), values.category);
-        push({ title: "Навык обновлён", msg: values.name + " · " + values.category });
+        const cat = CATEGORY_LABEL[values.category] ?? values.category;
+        push({ title: "Навык обновлён", msg: values.name + " · " + cat });
       }
       setModal(null);
     } catch (e) {
@@ -410,7 +409,9 @@ export function TeamPage({
                 {skills.map((s) => (
                   <th key={s.id}>
                     {s.name}
-                    <div style={{ fontWeight: 400, fontSize: 11, color: "#999" }}>{s.category}</div>
+                    <div style={{ fontWeight: 400, fontSize: 11, color: "#999" }}>
+                      {CATEGORY_LABEL[s.category] ?? s.category}
+                    </div>
                     {(canEditSkill || canDeleteSkill) && (
                       <div className="hdr-actions">
                         {canEditSkill && (
