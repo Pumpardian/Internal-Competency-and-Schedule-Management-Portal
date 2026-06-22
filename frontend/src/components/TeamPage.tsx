@@ -224,6 +224,8 @@ export function TeamPage({
   } | null>(null);
   // Строка поиска по сотрудникам.
   const [search, setSearch] = useState("");
+  // Направление сортировки сотрудников по ФИО.
+  const [sortDir, setSortDir] = useState<"az" | "za">("az");
 
   // Права текущего пользователя — какие изменения матрицы ему доступны.
   const { can } = useAccess();
@@ -237,10 +239,13 @@ export function TeamPage({
   const canRemoveLevel = can("employee_skill.delete");
 
   // Фильтрация сотрудников по подстроке имени (регистронезависимо).
-  // Поиск работает в пределах текущей страницы (бэкенд поиск не поддерживает).
-  const filtered = employees.filter((e) =>
-    e.name.toLowerCase().includes(search.toLowerCase()),
-  );
+  // Поиск и сортировка работают в пределах текущей страницы (бэкенд их не поддерживает).
+  const filtered = employees
+    .filter((e) => e.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      const cmp = a.name.localeCompare(b.name, "ru");
+      return sortDir === "az" ? cmp : -cmp;
+    });
 
   /** Сохранить уровень на сервере и показать результат. */
   const commitLevel = async (emp: Employee, skill: Skill, value: number) => {
@@ -361,6 +366,15 @@ export function TeamPage({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <select
+          className="input"
+          value={sortDir}
+          onChange={(e) => setSortDir(e.target.value as "az" | "za")}
+          aria-label="Сортировка сотрудников"
+        >
+          <option value="az">ФИО: А → Я</option>
+          <option value="za">ФИО: Я → А</option>
+        </select>
       </div>
 
       {/* Состояния загрузки и ошибки соединения с бэкендом. */}
