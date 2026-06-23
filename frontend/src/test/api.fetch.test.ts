@@ -24,6 +24,7 @@ import {
   login,
   getProfile,
   getToken,
+  fetchUsers,
   AUTH_UNAUTHORIZED_EVENT,
 } from "../api";
 
@@ -136,6 +137,22 @@ describe("getProfile", () => {
     inst.get.mockResolvedValue({ data: apiEmployee });
     const emp = await getProfile(1);
     expect(emp?.name).toBe("Петров Иван");
+  });
+});
+
+describe("fetchUsers (пагинация)", () => {
+  it("листает все страницы и собирает полный список", async () => {
+    inst.get
+      .mockResolvedValueOnce({ data: { page_size: 20, current_page: 1, total_pages: 2, data: [{ id: 1, username: "a", full_name: "Иванов Иван" }] } })
+      .mockResolvedValueOnce({ data: { page_size: 20, current_page: 2, total_pages: 2, data: [{ id: 2, username: "b", full_name: null }] } });
+    const users = await fetchUsers();
+    expect(users).toEqual([
+      { id: 1, username: "a", full_name: "Иванов Иван" },
+      { id: 2, username: "b", full_name: null },
+    ]);
+    expect(inst.get).toHaveBeenCalledTimes(2);
+    expect(inst.get).toHaveBeenNthCalledWith(1, "/users", { params: { current_page: 1, page_size: 20 } });
+    expect(inst.get).toHaveBeenNthCalledWith(2, "/users", { params: { current_page: 2, page_size: 20 } });
   });
 });
 

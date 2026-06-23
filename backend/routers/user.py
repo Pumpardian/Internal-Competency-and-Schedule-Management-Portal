@@ -64,8 +64,8 @@ class PagenatedUserResponse(BaseModel):
     current_page: int = Field(..., description="Номер текущей страницы", examples=[1])
     total_pages: int = Field(..., description="Общее количество страниц", examples=[5])
     data: List[UserResponse] = Field(..., description="Пользователи данной строницы",
-        examples=[[UserResponse(id=1, full_name="Иванов Иван", category="ivanov1"),
-                   UserResponse(id=2, full_name="Петров Петр", category="petrov2")]]
+        examples=[[UserResponse(id=1, username="ivanov1", full_name="Иванов Иван"),
+                   UserResponse(id=2, username="petrov2", full_name="Петров Петр")]]
     )
 
 
