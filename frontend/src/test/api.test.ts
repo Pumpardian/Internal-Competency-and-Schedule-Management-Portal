@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { currentUser, setToken, clearToken } from "./api";
+import { currentUser, setToken, clearToken } from "../api";
 
 /** Собирает «JWT»: header.payload.signature, где payload — base64 от JSON. */
 function makeToken(payload: object): string {

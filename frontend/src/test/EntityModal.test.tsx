@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { EntityModal, type FormField } from "./EntityModal";
+import { EntityModal, type FormField } from "../components/EntityModal";
 
 const fields: FormField[] = [{ name: "name", label: "Название", value: "", required: true }];
 

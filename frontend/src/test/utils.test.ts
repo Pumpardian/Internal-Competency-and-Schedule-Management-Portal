@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fmt, toMin, overlaps } from "./utils";
+import { fmt, toMin, overlaps } from "../utils";
 
 describe("fmt", () => {
   it("форматирует время с ведущими нулями", () => {

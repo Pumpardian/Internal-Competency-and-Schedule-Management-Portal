@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { useBookings } from "./useBookings";
+import { useBookings } from "../hooks/useBookings";
 import { fetchBookings, createBooking, deleteBooking } from "../api";
 import type { Booking } from "../types";
 

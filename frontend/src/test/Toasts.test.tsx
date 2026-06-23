@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { Toasts } from "./Toasts";
+import { Toasts } from "../components/Toasts";
 import type { Toast } from "../types";
 
 describe("Toasts", () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { HEAT, HEAT_TEXT, SKILL_CATEGORIES, CATEGORY_LABEL } from "./data";
+import { HEAT, HEAT_TEXT, SKILL_CATEGORIES, CATEGORY_LABEL } from "../data";
 
 describe("HEAT / HEAT_TEXT", () => {
   it("покрывают все уровни владения 0..5 (по 6 цветов)", () => {

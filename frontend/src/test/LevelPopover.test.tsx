@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { LevelPopover } from "./LevelPopover";
+import { LevelPopover } from "../components/LevelPopover";
 import type { Employee, Skill } from "../types";
 
 const emp: Employee = { id: 1, name: "Иванов Иван", firstName: "Иван", lastName: "Иванов", position: "" };
