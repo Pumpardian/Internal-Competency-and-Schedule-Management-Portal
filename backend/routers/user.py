@@ -1,14 +1,15 @@
 import json
 from fastapi import APIRouter, Depends, HTTPException, Request \
-, Body, Path, UploadFile, File, Form
+, Body, Path, UploadFile, File, Form, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from pydantic import BaseModel, Field
 from datetime import timedelta
 from typing import Annotated, List, Optional
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import datetime
+from math import ceil
 
 from models import User, Employee, Role
 from routers.employees import EmployeeCreate, EmployeeUpdate, EmployeeResponse
@@ -51,11 +52,21 @@ class UserProfileUpdateResponse(BaseModel):
     """Модель ответа при изменении профиля пользователя"""
     message: str = Field(..., description="Сообщение об операции", examples=["Профиль пользователя ivanov_ivan успешно обновлен"])
 
-class UserListItem(BaseModel):
-    """Элемент списка пользователей (для выбора при смене роли)"""
+class UserResponse(BaseModel):
+    """Элемент списка пользователей"""
     id: int = Field(..., description="Уникальный идентификатор пользователя", examples=[1])
     username: str = Field(..., description="Имя пользователя (логин)", examples=["ivanov1"])
     full_name: Optional[str] = Field(None, description="ФИО привязанного сотрудника, если есть", examples=["Иванов Иван"])
+
+class PagenatedUserResponse(BaseModel):
+    """Страничная модель ответа списка пользователей"""
+    page_size: int = Field(..., description="Размер страницы", examples=[2])
+    current_page: int = Field(..., description="Номер текущей страницы", examples=[1])
+    total_pages: int = Field(..., description="Общее количество страниц", examples=[5])
+    data: List[UserResponse] = Field(..., description="Пользователи данной строницы",
+        examples=[[UserResponse(id=1, full_name="Иванов Иван", category="ivanov1"),
+                   UserResponse(id=2, full_name="Петров Петр", category="petrov2")]]
+    )
 
 
 #Эндпоинты
@@ -268,36 +279,51 @@ def delete_account(
 @router.get(
     "/users",
     response_class=JSONResponse,
-    response_model=List[UserListItem],
+    response_model=PagenatedUserResponse,
     summary="Список пользователей",
     responses={
-        200: {"description": "Список пользователей", "model": List[UserListItem]},
+        200: {"description": "Список пользователей", "model": PagenatedUserResponse},
         401: {"description": "Не авторизован"},
         403: {"description": "Недостаточно прав доступа"},
     }
 )
-def list_users(
+def get_users(
     user: dict = Depends(require_permission("user_role.update")),
+    current_page: int = Query(default=1, description="Номер текущей страницы", examples=[2], ge=1),
+    page_size: int = Query(default=10, description="Размер страницы (1-20)", examples=[10], ge=1, le=20),
     db: Session = Depends(get_db)
 ):
     '''
-    Список всех пользователей (id, логин, ФИО сотрудника).
+    Список пользователей (постранично).
 
-    Доступен тем, кто может менять роли (право user_role.update). Используется
-    интерфейсом для выбора пользователя при смене роли.
+    Параметры запроса (опционально)
+    - **current_page**: Номер текущей страницы **[int]**.
+    - **page_size**: Размер страницы (1-20) **[int]**.
 
-    Возвращает список пользователей.
+    Возвращает страницу заданного размера из списка всех пользователей.
     '''
 
-    users = db.execute(select(User).order_by(User.username)).scalars().all()
-    return [
-        {
-            "id": u.id,
-            "username": u.username,
-            "full_name": f"{u.employee.last_name} {u.employee.first_name}".strip() if u.employee else None,
-        }
-        for u in users
-    ]
+    total_count = db.scalar(select(func.count(User.id)))
+    total_pages = ceil(total_count / page_size) if total_count > 0 else 1
+    offset = (current_page - 1) * page_size
+
+    statement = select(User).order_by(User.username).offset(offset).limit(page_size)
+    users = db.execute(statement).scalars().all()
+    
+    page = PagenatedUserResponse(
+        current_page=current_page,
+        page_size=page_size,
+        total_pages=total_pages,
+        data=[
+            {
+                "id": u.id,
+                "username": u.username,
+                "full_name": f"{u.employee.last_name} {u.employee.first_name}".strip() if u.employee else None,
+            }
+            for u in users
+        ]
+    )
+    return page
 
 
 @router.get(
