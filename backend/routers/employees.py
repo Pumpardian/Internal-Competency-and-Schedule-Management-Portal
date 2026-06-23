@@ -3,14 +3,14 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Body \
 , Path, Query, UploadFile, File
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, distinct
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 from math import ceil
 
 from utils.upload import save_employee_photo, delete_employee_photo
-from models import Employee
+from models import Employee, EmployeeSkill, Skill
 from dependencies import get_db, get_logger
 from utils.auth import user_dependency, require_permission
 
@@ -87,6 +87,7 @@ class PagenatedEmployeeResponse(BaseModel):
 )
 def get_employees(
     user: user_dependency,
+    skills: list[str] = Query(default=None, description="Навыки сотрудников", examples=["Python", "MongoDB"]),
     current_page: int = Query(default=1, description="Номер текущей страницы", examples=[2], ge=1),
     page_size: int = Query(default=10, description="Размер страницы (1-20)", examples=[10], ge=1, le=20),
     db: Session = Depends(get_db)
@@ -95,18 +96,30 @@ def get_employees(
     Получение списка сотрудников (постранично).
 
     Параметры запроса (опционально)
+    - **skills**: Навыки для фильтрации сотрудников **[list[str]]**.
     - **current_page**: Номер текущей страницы **[int]**.
     - **page_size**: Размер страницы (1-20) **[int]**.
     
     Возвращает список сотрудников.
     '''
 
-    total_count = db.scalar(select(func.count(Employee.id)))
+    statement = None
+    if skills and len(skills) > 0:
+        sub = select(Employee.id) \
+            .join(EmployeeSkill, EmployeeSkill.employee_id == Employee.id) \
+            .join(Skill, Skill.id == EmployeeSkill.skill_id) \
+            .where(Skill.name.in_(skills)) \
+            .group_by(Employee.id) \
+            .having(func.count(distinct(Skill.id)) == len(skills))
+        statement = select(Employee).where(Employee.id.in_(sub))
+    else:
+        statement = select(Employee)
+
+    total_count = db.scalar(select(func.count()).select_from(statement.subquery()))
     total_pages = ceil(total_count / page_size) if total_count > 0 else 1
     offset = (current_page - 1) * page_size
 
-    statement = select(Employee).offset(offset).limit(page_size)
-    employees = db.execute(statement).scalars().all()
+    employees = db.execute(statement.offset(offset).limit(page_size)).scalars().all()
     page = PagenatedEmployeeResponse(
         current_page=current_page,
         page_size=page_size,

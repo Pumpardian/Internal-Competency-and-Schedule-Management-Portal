@@ -4,12 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request \
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_, func
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import timedelta
 from typing import Annotated, List, Optional
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import datetime
 from math import ceil
+import re
 
 from models import User, Employee, Role
 from routers.employees import EmployeeCreate, EmployeeUpdate, EmployeeResponse
@@ -24,8 +25,21 @@ router = APIRouter()
 #Модели
 class RegisterRequest(BaseModel):
     username: str = Field(..., min_length=1, max_length=30, description="Имя пользователя", examples=["ivan_ivanov"])
-    password: str = Field(..., min_length=4, max_length=72, description="Пароль", examples=[1111])
+    password: str = Field(..., min_length=8, max_length=72, description="Пароль (мин. 8 символов, должен содержать заглавную и\
+                           строчную буквы, цифру и специальный символ)", examples=["SecurePassword123!"])
     employee_data: Optional[EmployeeCreate] = None
+
+    @field_validator('password')
+    def validate_password(cls, v):
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Пароль должен содержать хотя бы одну заглавную букву')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Пароль должен содержать хотя бы одну строчную букву')
+        if not re.search(r'\d', v):
+            raise ValueError('Пароль должен содержать хотя бы одну цифру')
+        if not re.search(r'[!@#$%^&*()_+\-=\[\]{};:"\\|,.<>/?]', v):
+            raise ValueError('Пароль должен содержать хотя бы один специальный символ')
+        return v
 
 class Token(BaseModel):
     access_token: str = Field(..., description="Токен для доступа")
@@ -45,8 +59,23 @@ class UserRoleChangeResponse(BaseModel):
 
 class UserProfileUpdateRequest(BaseModel):
     password: str = Field(..., min_length=4, max_length=72, description="Пароль", examples=[1111])
-    new_password: Optional[str] = Field(None, min_length=4, max_length=72, description="Новый пароль", examples=[2222])
+    new_password: Optional[str] = Field(None, min_length=8, max_length=72, description="Новый пароль (мин. 8 символов,\
+                           должен содержать заглавную и строчную буквы, цифру и специальный символ)", examples=["NewPassword123!"])
     employee_data: Optional[EmployeeUpdate] = None
+
+    @field_validator('new_password')
+    def validate_password(cls, v):
+        if not v:
+            return v
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Пароль должен содержать хотя бы одну заглавную букву')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Пароль должен содержать хотя бы одну строчную букву')
+        if not re.search(r'\d', v):
+            raise ValueError('Пароль должен содержать хотя бы одну цифру')
+        if not re.search(r'[!@#$%^&*()_+\-=\[\]{};:"\\|,.<>/?]', v):
+            raise ValueError('Пароль должен содержать хотя бы один специальный символ')
+        return v
 
 class UserProfileUpdateResponse(BaseModel):
     """Модель ответа при изменении профиля пользователя"""
@@ -93,7 +122,8 @@ async def register(
 
     Тело запроса:
     - **username**: Имя пользователя **[string]** (обязательно, 1-30 символов).
-    - **password**: Пароль пользователя **[string]** (обязательно).
+    - **password**: Пароль пользователя **[string]** (обязательно, (мин. 8 символов, должен содержать заглавную и\
+ строчную буквы, цифру и специальный символ)).
     - **employee_data**: Данные о сотруднике (опционально):
         - **first_name**: Имя сотрудника, **[string]** (обязательно, 1-100 символов).
         - **last_name**: Фамилия сотрудника **[string]** (обязательно, 1-100 символов).
@@ -453,7 +483,8 @@ async def update_user_profile(
         - **last_name**: Фамилия сотрудника **[string]** (1-100 символов).
         - **position**: Должность **[string]** (до 150 символов).
     - **photo**: Фото **[file]** (опционально, форматы jpg, png, gif, webp, bmp до 5 МБ).
-    - **new_password**: Новый пароль (опционально).
+    - **new_password**: Новый пароль (опционально (мин. 8 символов, должен содержать заглавную и\
+ строчную буквы, цифру и специальный символ)).
     - **password**: Пароль (обязательно).
 
     Возвращает сообщение об успехе.
