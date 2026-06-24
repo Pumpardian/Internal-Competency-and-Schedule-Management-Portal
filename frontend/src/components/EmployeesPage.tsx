@@ -7,6 +7,7 @@
  */
 import { useEffect, useState } from "react";
 import { fetchEmployees } from "../api";
+import { useT } from "../i18n";
 import type { Employee } from "../types";
 import { EmployeeCard } from "./EmployeeCard";
 
@@ -20,6 +21,7 @@ function initials(emp: Employee): string {
 
 /** Справочник сотрудников. */
 export function EmployeesPage() {
+  const { t } = useT();
   const [all, setAll] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,8 +82,8 @@ export function EmployeesPage() {
 
   return (
     <div className="page">
-      <h1>Сотрудники</h1>
-      <p className="subtitle">Справочник сотрудников: поиск, сортировка и переход в карточку.</p>
+      <h1>{t("employees.title")}</h1>
+      <p className="subtitle">{t("employees.subtitle")}</p>
 
       <div className="toolbar">
         <input

@@ -7,6 +7,7 @@
  */
 import { useState } from "react";
 import { login as loginRequest } from "../api";
+import { useT } from "../i18n";
 
 interface LoginPageProps {
   /** Вызывается после успешного входа (токен уже сохранён). */
@@ -17,6 +18,7 @@ interface LoginPageProps {
 
 /** Форма входа: логин и пароль. */
 export function LoginPage({ onSuccess, onRegister }: LoginPageProps) {
+  const { t } = useT();
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,28 +42,28 @@ export function LoginPage({ onSuccess, onRegister }: LoginPageProps) {
   return (
     <div className="auth-wrap">
       <form className="card auth-card" onSubmit={handleSubmit}>
-        <div className="auth-title">Вход на портал</div>
-        <p className="auth-subtitle">Портал Отдела цифровизации</p>
+        <div className="auth-title">{t("login.title")}</div>
+        <p className="auth-subtitle">{t("brand")}</p>
 
         <label className="auth-field">
-          <span>Логин</span>
+          <span>{t("login.username")}</span>
           <input
             className="input"
             type="text"
             autoComplete="username"
-            placeholder="Введите логин"
+            placeholder={t("login.usernamePh")}
             value={login}
             onChange={(e) => setLogin(e.target.value)}
           />
         </label>
 
         <label className="auth-field">
-          <span>Пароль</span>
+          <span>{t("login.password")}</span>
           <input
             className="input"
             type="password"
             autoComplete="current-password"
-            placeholder="Введите пароль"
+            placeholder={t("login.passwordPh")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -70,11 +72,11 @@ export function LoginPage({ onSuccess, onRegister }: LoginPageProps) {
         {error && <div className="auth-error">{error}</div>}
 
         <button className="btn primary auth-submit" type="submit" disabled={submitting}>
-          {submitting ? "Вход…" : "Войти"}
+          {submitting ? t("login.submitting") : t("login.submit")}
         </button>
 
         <button type="button" className="auth-link" onClick={() => onRegister?.()}>
-          Нет аккаунта? Зарегистрироваться
+          {t("login.toRegister")}
         </button>
       </form>
     </div>

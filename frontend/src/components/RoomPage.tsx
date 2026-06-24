@@ -9,6 +9,7 @@ import { useState } from "react";
 import { CAL_END, CAL_START, HOUR_PX } from "../data";
 import { useAccess } from "../hooks/useAccess";
 import { useBookings } from "../hooks/useBookings";
+import { useT } from "../i18n";
 import type { Booking, BookingDraft, Employee, TimeRange, ToastInput } from "../types";
 import { fmt } from "../utils";
 import { BookingModal } from "./BookingModal";
@@ -35,6 +36,7 @@ export function RoomPage({ employees, push }: RoomPageProps) {
   const { bookings, loading, error, reload, addBooking, removeBooking } = useBookings(date);
   // Профиль и права текущего пользователя (бронь за других — по праву booking.create).
   const { employee, can } = useAccess();
+  const { t } = useT();
   const canBookOthers = can("booking.create");
   const canDeleteOthers = can("booking.delete");
 
@@ -86,11 +88,8 @@ export function RoomPage({ employees, push }: RoomPageProps) {
 
   return (
     <div className="page">
-      <h1>Переговорная</h1>
-      <p className="subtitle">
-        Календарный вид дня. Клик по свободному промежутку создаёт бронь. Конфликты времени
-        отклоняются.
-      </p>
+      <h1>{t("room.title")}</h1>
+      <p className="subtitle">{t("room.subtitle")}</p>
 
       {/* Переключение дня; подсказка эндпоинта GET /bookings?date=. */}
       <div className="daybar">

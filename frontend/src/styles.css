@@ -3,11 +3,33 @@
   --primary-hover: #4096ff;
   --dark: #001529;
   --border: #d9d9d9;
+  --border-soft: #eef0f2;
   --bg: #f5f7fa;
+  --surface: #fff;
+  --surface-2: #fafafa;
+  --hover: #f5f8ff;
   --text: #1f1f1f;
+  --text-soft: #444;
   --muted: #888;
+  --badge-bg: #eef5ff;
+  --header-bg: var(--dark);
   --danger: #cf1322;
   --success: #52c41a;
+}
+
+/* Тёмная тема: переопределяем палитру, компоненты используют переменные. */
+[data-theme="dark"] {
+  --bg: #0f141b;
+  --surface: #1b212b;
+  --surface-2: #232b36;
+  --hover: #222c3a;
+  --border: #333d4b;
+  --border-soft: #2a3441;
+  --text: #e6e9ee;
+  --text-soft: #c2cad3;
+  --muted: #8a97a6;
+  --badge-bg: #16314f;
+  --header-bg: #0b1320;
 }
 
 * { box-sizing: border-box; }
@@ -24,7 +46,7 @@ body {
 .header {
   display: flex;
   align-items: center;
-  background: var(--dark);
+  background: var(--header-bg);
   color: #fff;
   height: 56px;
   padding: 0 20px;
@@ -71,7 +93,7 @@ body {
 /* ---------- Кнопки / поля ---------- */
 .btn {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--surface);
   border-radius: 6px;
   padding: 6px 14px;
   cursor: pointer;
@@ -88,7 +110,7 @@ body {
 .hdr-actions { display: flex; gap: 4px; justify-content: center; margin-top: 4px; }
 .icon-btn {
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--surface);
   border-radius: 4px;
   width: 20px;
   height: 20px;
@@ -114,8 +136,8 @@ body {
 .toolbar .search { margin-left: auto; width: 220px; }
 
 .card {
-  background: #fff;
-  border: 1px solid #eee;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
   border-radius: 10px;
   box-shadow: 0 1px 4px rgba(0,0,0,.04);
   padding: 16px;
@@ -124,12 +146,12 @@ body {
 /* ---------- Матрица компетенций ---------- */
 .matrix { border-collapse: collapse; width: 100%; }
 .matrix th, .matrix td {
-  border: 1px solid #eef0f2;
+  border: 1px solid var(--border-soft);
   text-align: center;
   padding: 0;
 }
 .matrix thead th {
-  background: #fafafa;
+  background: var(--surface-2);
   font-weight: 600;
   font-size: 13px;
   height: 44px;
@@ -139,7 +161,7 @@ body {
 .matrix .emp {
   text-align: left;
   padding: 8px 12px;
-  background: #fff;
+  background: var(--surface);
 }
 .matrix .emp .name { font-weight: 600; }
 .matrix .emp .pos { color: var(--muted); font-size: 12px; }
@@ -162,7 +184,7 @@ body {
   top: 54px;
   left: 50%;
   transform: translateX(-50%);
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0,0,0,.15);
@@ -185,7 +207,7 @@ body {
 
 /* Легенда тепловой карты */
 .legend { display: flex; align-items: center; gap: 6px; margin-top: 16px; font-size: 13px; color: var(--muted); }
-.legend .sw { width: 34px; height: 24px; border: 1px solid #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 600; color: #1f1f1f; }
+.legend .sw { width: 34px; height: 24px; border: 1px solid var(--border-soft); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 600; color: #1f1f1f; }
 
 /* ---------- Переговорная ---------- */
 .daybar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
@@ -194,15 +216,15 @@ body {
 
 .calendar {
   position: relative;
-  border: 1px solid #eef0f2;
+  border: 1px solid var(--border-soft);
   border-radius: 8px;
   overflow: hidden;
-  background: #fff;
+  background: var(--surface);
 }
 .cal-row {
   display: flex;
   height: 60px;
-  border-top: 1px solid #f0f2f4;
+  border-top: 1px solid var(--border-soft);
 }
 .cal-row:first-child { border-top: none; }
 .cal-time {
@@ -211,7 +233,7 @@ body {
   font-size: 12px;
   color: var(--muted);
   padding: 4px 8px;
-  border-right: 1px solid #f0f2f4;
+  border-right: 1px solid var(--border-soft);
 }
 .cal-track { position: relative; flex: 1; }
 .cal-track .slot-hit {
@@ -243,19 +265,19 @@ body {
   display: flex; align-items: center; justify-content: center; z-index: 50;
 }
 .modal {
-  background: #fff; border-radius: 10px; width: 380px;
+  background: var(--surface); border-radius: 10px; width: 380px;
   box-shadow: 0 12px 40px rgba(0,0,0,.25); overflow: hidden;
 }
-.modal .m-head { padding: 16px 20px; font-weight: 600; font-size: 16px; border-bottom: 1px solid #f0f0f0; }
+.modal .m-head { padding: 16px 20px; font-weight: 600; font-size: 16px; border-bottom: 1px solid var(--border-soft); }
 .modal .m-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-.modal label { font-size: 13px; color: #444; display: block; margin-bottom: 4px; }
-.modal .m-foot { padding: 14px 20px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #f0f0f0; }
+.modal label { font-size: 13px; color: var(--text-soft); display: block; margin-bottom: 4px; }
+.modal .m-foot { padding: 14px 20px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border-soft); }
 
 /* ---------- Уведомления (toast) ---------- */
 .toasts { position: fixed; top: 70px; right: 20px; z-index: 60; display: flex; flex-direction: column; gap: 10px; }
 .toast {
   min-width: 280px; max-width: 360px;
-  background: #fff; border-radius: 8px; padding: 12px 14px;
+  background: var(--surface); border-radius: 8px; padding: 12px 14px;
   box-shadow: 0 6px 24px rgba(0,0,0,.18);
   border-left: 4px solid var(--success);
   animation: slidein .2s ease;
@@ -263,16 +285,16 @@ body {
 .toast.error { border-left-color: var(--danger); }
 .toast .t-title { font-weight: 600; margin-bottom: 2px; }
 .toast .t-title.error { color: var(--danger); }
-.toast .t-msg { font-size: 13px; color: #555; }
+.toast .t-msg { font-size: 13px; color: var(--text-soft); }
 @keyframes slidein { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
 
-.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; background: #eef5ff; color: var(--primary); }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; background: var(--badge-bg); color: var(--primary); }
 
 /* ---------- Профиль ---------- */
 .profile-head { display: flex; align-items: center; gap: 20px; }
 .profile-avatar {
   width: 72px; height: 72px; border-radius: 50%;
-  flex: none; object-fit: cover; border: 1px solid #eee;
+  flex: none; object-fit: cover; border: 1px solid var(--border-soft);
 }
 .profile-avatar--initials {
   display: flex; align-items: center; justify-content: center;
@@ -294,11 +316,11 @@ body {
 .profile-level { display: flex; align-items: center; gap: 10px; }
 .profile-level-val {
   width: 24px; height: 24px; flex: none;
-  border-radius: 4px; border: 1px solid #eee;
+  border-radius: 4px; border: 1px solid var(--border-soft);
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; font-size: 13px;
 }
-.profile-level-bar { flex: 1; height: 8px; background: #eef0f2; border-radius: 4px; overflow: hidden; }
+.profile-level-bar { flex: 1; height: 8px; background: var(--border-soft); border-radius: 4px; overflow: hidden; }
 .profile-level-fill { height: 100%; background: var(--primary); border-radius: 4px; }
 
 /* ---------- Авторизация ---------- */
@@ -307,7 +329,7 @@ body {
 .auth-title { font-size: 20px; font-weight: 600; }
 .auth-subtitle { margin: -8px 0 0; color: var(--muted); font-size: 13px; }
 .auth-field { display: flex; flex-direction: column; gap: 6px; }
-.auth-field span { font-size: 13px; color: #444; }
+.auth-field span { font-size: 13px; color: var(--text-soft); }
 .auth-field .input { width: 100%; }
 .auth-submit { margin-top: 4px; }
 .auth-error {
@@ -337,7 +359,7 @@ body {
 .emp-ident { display: flex; align-items: center; gap: 10px; }
 .emp-avatar {
   width: 36px; height: 36px; border-radius: 50%;
-  flex: none; object-fit: cover; border: 1px solid #eee;
+  flex: none; object-fit: cover; border: 1px solid var(--border-soft);
 }
 .emp-avatar--initials {
   display: flex; align-items: center; justify-content: center;
@@ -361,10 +383,10 @@ body {
 .emp-list { list-style: none; margin: 0; padding: 0; }
 .emp-list-item {
   display: flex; align-items: center; gap: 12px;
-  padding: 10px 16px; cursor: pointer; border-bottom: 1px solid #eef0f2;
+  padding: 10px 16px; cursor: pointer; border-bottom: 1px solid var(--border-soft);
 }
 .emp-list-item:last-child { border-bottom: none; }
-.emp-list-item:hover { background: #f5f8ff; }
+.emp-list-item:hover { background: var(--hover); }
 .emp-list-info { flex: 1; min-width: 0; }
 .emp-list-info .name { font-weight: 600; }
 .emp-list-info .pos { color: var(--muted); font-size: 13px; }
@@ -376,11 +398,11 @@ body {
 .combo-list {
   position: absolute; z-index: 40; top: calc(100% + 2px); left: 0; right: 0;
   max-height: 240px; overflow-y: auto; margin: 0; padding: 4px; list-style: none;
-  background: #fff; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
   box-shadow: 0 6px 20px rgba(0,0,0,.12);
 }
 .combo-list li { padding: 7px 10px; border-radius: 4px; cursor: pointer; font-size: 14px; }
-.combo-list li:hover, .combo-list li.active { background: #f5f8ff; }
+.combo-list li:hover, .combo-list li.active { background: var(--hover); }
 
 /* ---------- Фиксы отображения/наложения ---------- */
 /* Длинное ФИО не должно наезжать на кнопки действий в матрице. */

@@ -7,10 +7,12 @@
  */
 import { useEffect, useState } from "react";
 import { currentUser, getProfile } from "../api";
+import { useT } from "../i18n";
 import { EmployeeCard } from "./EmployeeCard";
 
 /** Страница собственного профиля. */
 export function ProfilePage() {
+  const { t } = useT();
   const myUserId = currentUser()?.id;
   // undefined — ещё грузим; null — у аккаунта нет сотрудника; число — id сотрудника.
   const [employeeId, setEmployeeId] = useState<number | null | undefined>(undefined);
@@ -31,8 +33,8 @@ export function ProfilePage() {
 
   return (
     <div className="page">
-      <h1>Профиль</h1>
-      <p className="subtitle">Ваша карточка: личные данные и навыки с уровнями владения.</p>
+      <h1>{t("profile.title")}</h1>
+      <p className="subtitle">{t("profile.subtitle")}</p>
 
       {employeeId === undefined && <div className="card">Загрузка…</div>}
       {employeeId === null && (

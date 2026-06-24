@@ -25,4 +25,18 @@ describe("Header", () => {
     fireEvent.click(screen.getByText("Выйти"));
     expect(onLogout).toHaveBeenCalledTimes(1);
   });
+
+  it("показывает переключатель темы и вызывает onToggleTheme", () => {
+    const onToggleTheme = vi.fn();
+    render(
+      <Header page="team" setPage={() => {}} username="u" onLogout={() => {}} theme="light" onToggleTheme={onToggleTheme} />,
+    );
+    fireEvent.click(screen.getByLabelText("Переключить тему"));
+    expect(onToggleTheme).toHaveBeenCalledTimes(1);
+  });
+
+  it("без onToggleTheme кнопки темы нет", () => {
+    render(<Header page="team" setPage={() => {}} username="u" onLogout={() => {}} />);
+    expect(screen.queryByLabelText("Переключить тему")).toBeNull();
+  });
 });

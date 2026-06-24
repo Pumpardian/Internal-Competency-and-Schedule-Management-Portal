@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { CATEGORY_LABEL, HEAT, HEAT_TEXT, SKILL_CATEGORIES } from "../data";
 import { useAccess } from "../hooks/useAccess";
+import { useT } from "../i18n";
 import type { Employee, Levels, Skill, ToastInput } from "../types";
 import { EntityModal, type FormField } from "./EntityModal";
 import { LevelPopover } from "./LevelPopover";
@@ -229,6 +230,7 @@ export function TeamPage({
 
   // Права текущего пользователя — какие изменения матрицы ему доступны.
   const { can } = useAccess();
+  const { t } = useT();
   const canAddEmployee = can("employee.create");
   const canAddSkill = can("skill.create");
   const canEditEmployee = can("employee.update");
@@ -341,7 +343,7 @@ export function TeamPage({
 
   return (
     <div className="page">
-      <h1>Команда и навыки</h1>
+      <h1>{t("team.title")}</h1>
       <p className="subtitle">
         Матрица компетенций сотрудников. Ячейка раскрашена по уровню владения (тепловая карта). Клик
         по ячейке — изменение уровня.{" "}

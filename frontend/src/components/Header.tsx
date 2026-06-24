@@ -1,9 +1,12 @@
 /**
  * Шапка портала: бренд, навигация между страницами и текущий пользователь.
  *
- * Показывает логин вошедшего пользователя (из JWT) и кнопку выхода.
+ * Показывает логин вошедшего пользователя (из JWT), переключатели языка и темы
+ * и кнопку выхода. Подписи берутся из i18n (t).
  */
 import type { Page } from "../types";
+import type { Theme } from "../hooks/useTheme";
+import { LANGS, useT, type Lang } from "../i18n";
 
 interface HeaderProps {
   /** Текущая активная страница. */
@@ -14,37 +17,63 @@ interface HeaderProps {
   username: string;
   /** Выход из системы. */
   onLogout: () => void;
+  /** Текущая тема (для иконки переключателя). */
+  theme?: Theme;
+  /** Переключить тему; если задан — в шапке показывается кнопка. */
+  onToggleTheme?: () => void;
 }
 
-/** Верхняя панель с навигацией, именем пользователя и выходом. */
-export function Header({ page, setPage, username, onLogout }: HeaderProps) {
+/** Верхняя панель с навигацией, переключателями языка/темы и выходом. */
+export function Header({ page, setPage, username, onLogout, theme, onToggleTheme }: HeaderProps) {
+  const { t, lang, setLang } = useT();
   return (
     <header className="header">
-      <span className="brand">Портал Отдела цифровизации</span>
+      <span className="brand">{t("brand")}</span>
       <nav>
         <button className={page === "team" ? "active" : ""} onClick={() => setPage("team")}>
-          Команда и навыки
+          {t("nav.team")}
         </button>
         <button className={page === "room" ? "active" : ""} onClick={() => setPage("room")}>
-          Переговорная
+          {t("nav.room")}
         </button>
         <button
           className={page === "employees" ? "active" : ""}
           onClick={() => setPage("employees")}
         >
-          Сотрудники
+          {t("nav.employees")}
         </button>
         <button className={page === "profile" ? "active" : ""} onClick={() => setPage("profile")}>
-          Профиль
+          {t("nav.profile")}
         </button>
         <button className={page === "account" ? "active" : ""} onClick={() => setPage("account")}>
-          Аккаунт
+          {t("nav.account")}
         </button>
       </nav>
       <div className="user">
+        <select
+          aria-label="Язык интерфейса"
+          value={lang}
+          onChange={(e) => setLang(e.target.value as Lang)}
+        >
+          {LANGS.map((l) => (
+            <option key={l.value} value={l.value}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+        {onToggleTheme && (
+          <button
+            className="btn"
+            onClick={onToggleTheme}
+            title={theme === "dark" ? t("themeLight") : t("themeDark")}
+            aria-label="Переключить тему"
+          >
+            {theme === "dark" ? "☀" : "🌙"}
+          </button>
+        )}
         <span className="user-name">{username}</span>
         <button className="btn" onClick={onLogout}>
-          Выйти
+          {t("logout")}
         </button>
       </div>
     </header>

@@ -18,6 +18,7 @@ import {
   type ApiRole,
   type ApiUserListItem,
 } from "../api";
+import { useT } from "../i18n";
 import type { Employee, ToastInput } from "../types";
 
 interface AccountPageProps {
@@ -39,6 +40,7 @@ function initials(first: string, last: string): string {
 
 /** Страница управления собственным аккаунтом. */
 export function AccountPage({ push, onLogout }: AccountPageProps) {
+  const { t } = useT();
   const me = currentUser();
   // Профиль сотрудника текущего пользователя (или null, если его нет).
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -234,7 +236,7 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
 
   return (
     <div className="page">
-      <h1>Аккаунт</h1>
+      <h1>{t("account.title")}</h1>
       <p className="subtitle">
         Управление собственной учётной записью.{" "}
         <span className="api-hint">PATCH /users/&#123;id&#125;/profile</span>

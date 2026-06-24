@@ -7,6 +7,7 @@
  */
 import { useState } from "react";
 import { register as registerRequest } from "../api";
+import { useT } from "../i18n";
 
 interface RegisterPageProps {
   /** Вызывается после успешной регистрации. */
@@ -17,6 +18,7 @@ interface RegisterPageProps {
 
 /** Форма регистрации: учётные данные + профиль сотрудника и фото (опционально). */
 export function RegisterPage({ onSuccess, onLogin }: RegisterPageProps) {
+  const { t } = useT();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -49,68 +51,68 @@ export function RegisterPage({ onSuccess, onLogin }: RegisterPageProps) {
   return (
     <div className="auth-wrap">
       <form className="card auth-card" onSubmit={handleSubmit}>
-        <div className="auth-title">Регистрация</div>
-        <p className="auth-subtitle">Портал Отдела цифровизации</p>
+        <div className="auth-title">{t("register.title")}</div>
+        <p className="auth-subtitle">{t("brand")}</p>
 
         <label className="auth-field">
-          <span>Логин</span>
+          <span>{t("register.username")}</span>
           <input
             className="input"
             type="text"
             autoComplete="username"
-            placeholder="Придумайте логин"
+            placeholder={t("register.usernamePh")}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
         </label>
 
         <label className="auth-field">
-          <span>Пароль</span>
+          <span>{t("register.password")}</span>
           <input
             className="input"
             type="password"
             autoComplete="new-password"
-            placeholder="Придумайте пароль"
+            placeholder={t("register.passwordPh")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </label>
 
         <label className="auth-field">
-          <span>Имя</span>
+          <span>{t("register.firstName")}</span>
           <input
             className="input"
             type="text"
-            placeholder="Имя сотрудника"
+            placeholder={t("register.firstNamePh")}
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
           />
         </label>
 
         <label className="auth-field">
-          <span>Фамилия</span>
+          <span>{t("register.lastName")}</span>
           <input
             className="input"
             type="text"
-            placeholder="Фамилия сотрудника"
+            placeholder={t("register.lastNamePh")}
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
           />
         </label>
 
         <label className="auth-field">
-          <span>Должность</span>
+          <span>{t("register.position")}</span>
           <input
             className="input"
             type="text"
-            placeholder="Должность (необязательно)"
+            placeholder={t("register.positionPh")}
             value={position}
             onChange={(e) => setPosition(e.target.value)}
           />
         </label>
 
         <label className="auth-field">
-          <span>Фото</span>
+          <span>{t("register.photo")}</span>
           <input
             className="input"
             type="file"
@@ -122,11 +124,11 @@ export function RegisterPage({ onSuccess, onLogin }: RegisterPageProps) {
         {error && <div className="auth-error">{error}</div>}
 
         <button className="btn primary auth-submit" type="submit" disabled={submitting}>
-          {submitting ? "Регистрация…" : "Зарегистрироваться"}
+          {submitting ? t("register.submitting") : t("register.submit")}
         </button>
 
         <button type="button" className="auth-link" onClick={() => onLogin?.()}>
-          Уже есть аккаунт? Войти
+          {t("register.toLogin")}
         </button>
       </form>
     </div>
