@@ -19,6 +19,8 @@ import {
   type ApiUserListItem,
 } from "../api";
 import { useT } from "../i18n";
+import { isPasswordStrong } from "../password";
+import { PasswordStrength } from "./PasswordStrength";
 import type { Employee, ToastInput } from "../types";
 
 interface AccountPageProps {
@@ -171,6 +173,11 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
       push({ type: "error", title: "Нужен пароль", msg: "Введите текущий пароль для подтверждения изменений." });
       return;
     }
+    // Если задан новый пароль — проверяем его сложность (как на бэкенде).
+    if (newPassword && !isPasswordStrong(newPassword)) {
+      push({ type: "error", title: "Слабый пароль", msg: t("password.weak") });
+      return;
+    }
     setSaving(true);
     try {
       const employeeChanges = employee
@@ -318,6 +325,8 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
               onChange={(e) => setNewPassword(e.target.value)}
             />
           </label>
+
+          <PasswordStrength password={newPassword} />
 
           <label className="auth-field">
             <span>Текущий пароль (обязательно для сохранения)</span>

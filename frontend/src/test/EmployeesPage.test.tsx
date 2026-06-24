@@ -28,6 +28,11 @@ describe("EmployeesPage", () => {
     expect(screen.getByText("Петров Пётр")).toBeTruthy();
   });
 
+  it("показывает кнопку экспорта в Excel", async () => {
+    render(<EmployeesPage />);
+    expect(await screen.findByText("Экспорт в Excel")).toBeTruthy();
+  });
+
   it("фильтрует список по поисковой строке", async () => {
     render(<EmployeesPage />);
     await screen.findByText("Иванов Иван");

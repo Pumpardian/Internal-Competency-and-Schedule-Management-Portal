@@ -7,6 +7,7 @@
  */
 import { useEffect, useState } from "react";
 import { fetchEmployees } from "../api";
+import { exportEmployeesToExcel } from "../exportEmployees";
 import { useT } from "../i18n";
 import type { Employee } from "../types";
 import { EmployeeCard } from "./EmployeeCard";
@@ -89,7 +90,7 @@ export function EmployeesPage() {
         <input
           className="input search"
           style={{ marginLeft: 0 }}
-          placeholder="Поиск по имени…"
+          placeholder={t("employees.searchPh")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -102,6 +103,11 @@ export function EmployeesPage() {
           <option value="az">ФИО: А → Я</option>
           <option value="za">ФИО: Я → А</option>
         </select>
+        {!loading && !error && all.length > 0 && (
+          <button className="btn" onClick={() => exportEmployeesToExcel(all)}>
+            {t("employees.export")}
+          </button>
+        )}
         {!loading && !error && (
           <span className="api-hint">
             {list.length} из {all.length}

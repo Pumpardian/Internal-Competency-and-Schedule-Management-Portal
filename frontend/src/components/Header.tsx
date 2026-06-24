@@ -7,6 +7,7 @@
 import type { Page } from "../types";
 import type { Theme } from "../hooks/useTheme";
 import { LANGS, useT, type Lang } from "../i18n";
+import { EmployeeSearch } from "./EmployeeSearch";
 
 interface HeaderProps {
   /** Текущая активная страница. */
@@ -21,10 +22,20 @@ interface HeaderProps {
   theme?: Theme;
   /** Переключить тему; если задан — в шапке показывается кнопка. */
   onToggleTheme?: () => void;
+  /** Открыть профиль сотрудника из глобального поиска (если задан — поиск виден). */
+  onOpenEmployee?: (id: number) => void;
 }
 
-/** Верхняя панель с навигацией, переключателями языка/темы и выходом. */
-export function Header({ page, setPage, username, onLogout, theme, onToggleTheme }: HeaderProps) {
+/** Верхняя панель с навигацией, поиском, переключателями языка/темы и выходом. */
+export function Header({
+  page,
+  setPage,
+  username,
+  onLogout,
+  theme,
+  onToggleTheme,
+  onOpenEmployee,
+}: HeaderProps) {
   const { t, lang, setLang } = useT();
   return (
     <header className="header">
@@ -49,6 +60,7 @@ export function Header({ page, setPage, username, onLogout, theme, onToggleTheme
           {t("nav.account")}
         </button>
       </nav>
+      {onOpenEmployee && <EmployeeSearch onSelect={onOpenEmployee} />}
       <div className="user">
         <select
           aria-label="Язык интерфейса"

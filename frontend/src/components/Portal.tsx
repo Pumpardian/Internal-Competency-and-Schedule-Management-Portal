@@ -77,6 +77,7 @@ export function Portal({ onLogout, theme, onToggleTheme }: PortalProps) {
         onLogout={onLogout}
         theme={theme}
         onToggleTheme={onToggleTheme}
+        onOpenEmployee={setProfileEmpId}
       />
       {/* Открытый профиль сотрудника (из матрицы) поверх обычных страниц. */}
       {profileEmpId !== null ? (

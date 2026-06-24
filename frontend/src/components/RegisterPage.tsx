@@ -7,7 +7,9 @@
  */
 import { useState } from "react";
 import { register as registerRequest } from "../api";
+import { isPasswordStrong } from "../password";
 import { useT } from "../i18n";
+import { PasswordStrength } from "./PasswordStrength";
 
 interface RegisterPageProps {
   /** Вызывается после успешной регистрации. */
@@ -32,6 +34,11 @@ export function RegisterPage({ onSuccess, onLogin }: RegisterPageProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    // Клиентская проверка сложности пароля (правила те же, что на бэкенде).
+    if (!isPasswordStrong(password)) {
+      setError(t("password.weak"));
+      return;
+    }
     setSubmitting(true);
     try {
       // Данные сотрудника передаём только если указаны имя и фамилия.
@@ -77,6 +84,8 @@ export function RegisterPage({ onSuccess, onLogin }: RegisterPageProps) {
             onChange={(e) => setPassword(e.target.value)}
           />
         </label>
+
+        <PasswordStrength password={password} />
 
         <label className="auth-field">
           <span>{t("register.firstName")}</span>

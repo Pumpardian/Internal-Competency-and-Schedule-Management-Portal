@@ -350,6 +350,16 @@ body {
   align-self: center;
 }
 .auth-link:hover { text-decoration: underline; }
+
+/* Чек-лист требований к паролю */
+.pw-checks { list-style: none; margin: -8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+.pw-checks li { color: var(--danger); }
+.pw-checks li.ok { color: var(--success); }
+.pw-checks .pw-mark { display: inline-block; width: 14px; font-weight: 700; }
+
+/* Глобальный поиск сотрудника в шапке */
+.header-search { margin-left: 24px; width: 240px; }
+.header-search .input { width: 100%; background: var(--surface); color: var(--text); }
 .mock-note {
   max-width: 1120px; margin: 0 auto 24px; padding: 10px 20px;
   color: var(--muted); font-size: 12px;
