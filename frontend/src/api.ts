@@ -266,6 +266,17 @@ export async function createBooking(date: string, draft: BookingDraft): Promise<
   return toBooking(data);
 }
 
+/** PATCH /bookings/{id} — изменить бронь (тема/сотрудник/время). */
+export async function updateBooking(id: number, date: string, draft: BookingDraft): Promise<Booking> {
+  const { data } = await api.patch<ApiBooking>(`/bookings/${id}`, {
+    employee_id: draft.empId,
+    topic: draft.topic,
+    start_time: isoDateTime(date, draft.startH, draft.startM),
+    end_time: isoDateTime(date, draft.endH, draft.endM),
+  });
+  return toBooking(data);
+}
+
 /** DELETE /bookings/{id} — удалить бронь. */
 export async function deleteBooking(id: number): Promise<void> {
   await api.delete(`/bookings/${id}`);

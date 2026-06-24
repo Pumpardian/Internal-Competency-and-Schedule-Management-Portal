@@ -32,13 +32,16 @@ export function RoomPage({ employees, push }: RoomPageProps) {
   const [date, setDate] = useState("2026-06-08");
   // Интервал, для которого открыта модалка создания (или null).
   const [modal, setModal] = useState<TimeRange | null>(null);
+  // Бронь, открытая на редактирование (или null).
+  const [editing, setEditing] = useState<Booking | null>(null);
   // Брони текущего дня с бэкенда.
-  const { bookings, loading, error, reload, addBooking, removeBooking } = useBookings(date);
+  const { bookings, loading, error, reload, addBooking, editBooking, removeBooking } = useBookings(date);
   // Профиль и права текущего пользователя (бронь за других — по праву booking.create).
   const { employee, can } = useAccess();
   const { t } = useT();
   const canBookOthers = can("booking.create");
   const canDeleteOthers = can("booking.delete");
+  const canEditOthers = can("booking.update");
 
   /** Открыть модалку создания, проверив, что бронировать вообще можно. */
   const openSlot = (range: TimeRange) => {
@@ -78,6 +81,19 @@ export function RoomPage({ employees, push }: RoomPageProps) {
       await removeBooking(b.id);
       push({ title: "Бронь отменена", msg: b.topic });
     } catch (e) {
+      push({ type: "error", title: "Ошибка", msg: errMessage(e) });
+    }
+  };
+
+  /** Сохранить изменения брони на сервере; при успехе закрыть окно. */
+  const saveEdit = async (data: BookingDraft) => {
+    if (!editing) return;
+    try {
+      await editBooking(editing.id, data);
+      push({ title: t("room.bookingUpdated"), msg: data.topic });
+      setEditing(null);
+    } catch (e) {
+      // Сервер отклоняет пересечение интервалов (409) — показываем его текст.
       push({ type: "error", title: "Ошибка", msg: errMessage(e) });
     }
   };
@@ -148,6 +164,16 @@ export function RoomPage({ employees, push }: RoomPageProps) {
                   className="event"
                   style={{ top, height, background: color, pointerEvents: "auto" }}
                 >
+                  {/* Кнопка изменения: своя бронь или есть право менять за других. */}
+                  {(canEditOthers || b.empId === employee?.id) && (
+                    <span
+                      className="ev-edit"
+                      title={t("room.edit")}
+                      onClick={() => setEditing(b)}
+                    >
+                      ✎
+                    </span>
+                  )}
                   {/* Кнопка отмены: своя бронь или есть право удалять за других. */}
                   {(canDeleteOthers || b.empId === employee?.id) && (
                     <span
@@ -178,6 +204,19 @@ export function RoomPage({ employees, push }: RoomPageProps) {
           lockedEmployee={canBookOthers ? null : employee}
           onClose={() => setModal(null)}
           onSubmit={(data) => void createBooking(data)}
+        />
+      )}
+
+      {/* Модалка редактирования брони; при успехе закрывается. */}
+      {editing && (
+        <BookingModal
+          employees={employees}
+          date={date}
+          init={{ startH: editing.startH, startM: editing.startM, endH: editing.endH, endM: editing.endM }}
+          existing={editing}
+          lockedEmployee={canBookOthers ? null : employee}
+          onClose={() => setEditing(null)}
+          onSubmit={(data) => void saveEdit(data)}
         />
       )}
     </div>

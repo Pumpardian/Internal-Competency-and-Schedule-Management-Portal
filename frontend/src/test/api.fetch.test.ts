@@ -19,6 +19,7 @@ import {
   fetchEmployee,
   fetchBookings,
   createBooking,
+  updateBooking,
   createEmployee,
   register,
   login,
@@ -87,6 +88,17 @@ describe("fetchBookings / createBooking (UTC)", () => {
     expect(inst.post).toHaveBeenCalledWith("/bookings", {
       employee_id: 2, topic: "Демо", start_time: "2026-06-08T11:00:00Z", end_time: "2026-06-08T12:00:00Z",
     });
+  });
+
+  it("PATCH /bookings/{id} — обновляет бронь и маппит ответ", async () => {
+    inst.patch.mockResolvedValue({
+      data: { id: 9, employee_id: 2, topic: "Новая тема", start_time: "2026-06-08T11:00:00Z", end_time: "2026-06-08T12:00:00Z" },
+    });
+    const r = await updateBooking(9, "2026-06-08", { topic: "Новая тема", empId: 2, startH: 11, startM: 0, endH: 12, endM: 0 });
+    expect(inst.patch).toHaveBeenCalledWith("/bookings/9", {
+      employee_id: 2, topic: "Новая тема", start_time: "2026-06-08T11:00:00Z", end_time: "2026-06-08T12:00:00Z",
+    });
+    expect(r).toMatchObject({ id: 9, topic: "Новая тема", empId: 2, startH: 11, endH: 12 });
   });
 });
 

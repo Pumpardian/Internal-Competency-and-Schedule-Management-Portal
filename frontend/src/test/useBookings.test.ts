@@ -1,18 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useBookings } from "../hooks/useBookings";
-import { fetchBookings, createBooking, deleteBooking } from "../api";
+import { fetchBookings, createBooking, deleteBooking, updateBooking } from "../api";
 import type { Booking } from "../types";
 
 // Хук ходит в REST API — подменяем модуль, чтобы тестировать только его логику.
 vi.mock("../api", () => ({
   fetchBookings: vi.fn(),
   createBooking: vi.fn(),
+  updateBooking: vi.fn(),
   deleteBooking: vi.fn(),
 }));
 
 const mockFetch = vi.mocked(fetchBookings);
 const mockCreate = vi.mocked(createBooking);
+const mockUpdate = vi.mocked(updateBooking);
 const mockDelete = vi.mocked(deleteBooking);
 
 const b1: Booking = { id: 1, topic: "Планёрка", empId: 1, startH: 9, startM: 0, endH: 10, endM: 0 };
@@ -41,6 +43,20 @@ describe("useBookings", () => {
     });
     expect(mockCreate).toHaveBeenCalledWith("2026-01-15", expect.objectContaining({ topic: "Демо" }));
     expect(result.current.bookings).toEqual([created]);
+  });
+
+  it("editBooking заменяет бронь в состоянии", async () => {
+    mockFetch.mockResolvedValue([b1]);
+    const updated: Booking = { ...b1, topic: "Изменено" };
+    mockUpdate.mockResolvedValue(updated);
+    const { result } = renderHook(() => useBookings("2026-01-15"));
+    await waitFor(() => expect(result.current.bookings).toHaveLength(1));
+
+    await act(async () => {
+      await result.current.editBooking(1, { topic: "Изменено", empId: 1, startH: 9, startM: 0, endH: 10, endM: 0 });
+    });
+    expect(mockUpdate).toHaveBeenCalledWith(1, "2026-01-15", expect.objectContaining({ topic: "Изменено" }));
+    expect(result.current.bookings[0].topic).toBe("Изменено");
   });
 
   it("removeBooking убирает бронь по id", async () => {

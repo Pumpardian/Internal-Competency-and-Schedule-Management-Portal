@@ -258,6 +258,11 @@ body {
   cursor: pointer; opacity: .8; font-weight: 700;
 }
 .event .ev-del:hover { opacity: 1; }
+.event .ev-edit {
+  position: absolute; top: 4px; right: 24px;
+  cursor: pointer; opacity: .8; font-weight: 700; font-size: 12px;
+}
+.event .ev-edit:hover { opacity: 1; }
 
 /* ---------- Модальное окно ---------- */
 .overlay {

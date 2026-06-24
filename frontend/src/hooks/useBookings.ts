@@ -6,7 +6,7 @@
  * сервера. Проверку пересечений по времени делает бэкенд (ответ 409).
  */
 import { useCallback, useEffect, useState } from "react";
-import { createBooking, deleteBooking, fetchBookings } from "../api";
+import { createBooking, deleteBooking, fetchBookings, updateBooking } from "../api";
 import type { Booking, BookingDraft } from "../types";
 
 export interface UseBookings {
@@ -19,6 +19,8 @@ export interface UseBookings {
   reload: () => Promise<void>;
   /** Создать бронь (бросает ошибку при конфликте времени — 409). */
   addBooking: (draft: BookingDraft) => Promise<void>;
+  /** Изменить бронь (бросает ошибку при конфликте времени — 409). */
+  editBooking: (id: number, draft: BookingDraft) => Promise<void>;
   /** Удалить бронь. */
   removeBooking: (id: number) => Promise<void>;
 }
@@ -52,10 +54,18 @@ export function useBookings(date: string): UseBookings {
     [date],
   );
 
+  const editBooking = useCallback(
+    async (id: number, draft: BookingDraft) => {
+      const updated = await updateBooking(id, date, draft);
+      setBookings((prev) => prev.map((b) => (b.id === id ? updated : b)));
+    },
+    [date],
+  );
+
   const removeBooking = useCallback(async (id: number) => {
     await deleteBooking(id);
     setBookings((prev) => prev.filter((b) => b.id !== id));
   }, []);
 
-  return { bookings, loading, error, reload, addBooking, removeBooking };
+  return { bookings, loading, error, reload, addBooking, editBooking, removeBooking };
 }

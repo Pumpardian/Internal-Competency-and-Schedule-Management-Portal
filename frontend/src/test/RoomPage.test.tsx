@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { RoomPage } from "../components/RoomPage";
 import {
-  fetchBookings, createBooking, deleteBooking,
+  fetchBookings, createBooking, updateBooking, deleteBooking,
   currentUser, getProfile, getRole, fetchRolePermissions,
 } from "../api";
 import type { Booking, Employee } from "../types";
 
 vi.mock("../api", () => ({
-  fetchBookings: vi.fn(), createBooking: vi.fn(), deleteBooking: vi.fn(),
+  fetchBookings: vi.fn(), createBooking: vi.fn(), updateBooking: vi.fn(), deleteBooking: vi.fn(),
   currentUser: vi.fn(), getProfile: vi.fn(), getRole: vi.fn(), fetchRolePermissions: vi.fn(),
 }));
 const mFetch = vi.mocked(fetchBookings);
@@ -23,6 +23,7 @@ const booking: Booking = { id: 1, topic: "Планёрка", empId: 1, startH: 9
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(createBooking).mockResolvedValue(booking);
+  vi.mocked(updateBooking).mockResolvedValue(booking);
   vi.mocked(deleteBooking).mockResolvedValue();
   mMe.mockReturnValue({ id: 1, username: "ivanov" });
   mProfile.mockResolvedValue(ivanov);
@@ -46,6 +47,17 @@ describe("RoomPage", () => {
     await waitFor(() => expect(container.querySelector(".ev-del")).toBeTruthy());
     fireEvent.click(container.querySelectorAll(".cal-track")[2]);
     expect(await screen.findByText(/Новая бронь/)).toBeTruthy();
+  });
+
+  it("клик по ✎ открывает окно редактирования брони", async () => {
+    mFetch.mockResolvedValue([booking]);
+    const { container } = render(<RoomPage employees={[ivanov]} push={vi.fn()} />);
+    // ✎ появляется, когда загрузился профиль (своя бронь).
+    await waitFor(() => expect(container.querySelector(".ev-edit")).toBeTruthy());
+    fireEvent.click(container.querySelector(".ev-edit")!);
+    expect(await screen.findByText(/Изменить бронь/)).toBeTruthy();
+    // тема предзаполнена из существующей брони
+    expect((screen.getByDisplayValue("Планёрка") as HTMLInputElement)).toBeTruthy();
   });
 
   it("показывает ошибку загрузки броней", async () => {

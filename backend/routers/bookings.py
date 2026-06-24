@@ -189,6 +189,11 @@ async def update_booking(
     
     statement = select(Booking).where(Booking.id == id)
     booking = db.execute(statement).scalar_one_or_none()
+    if not booking:
+        raise HTTPException(
+            status_code=404,
+            detail="Бронь не найдена"
+        )
 
     statement = select(User).where(User.id == user["id"])
     user: User = db.execute(statement).scalar_one_or_none()
@@ -202,6 +207,7 @@ async def update_booking(
 
     statement = select(Booking).where(
         and_(
+            Booking.id != id,
             Booking.start_time < booking_data.end_time,
             Booking.end_time > booking_data.start_time
         )
@@ -217,10 +223,10 @@ async def update_booking(
                        до {booking_data.topic} для сотрудника с ID {booking_data.employee_id} на {booking_data.start_time} \
                        продолжительностью {booking_data.end_time - booking_data.start_time}")
         
-    booking.employee_id=booking_data.employee_id,
-    booking.topic=booking_data.topic,
-    booking.start_time=booking_data.start_time,
-    booking.end_time=booking_data.end_time
+    booking.employee_id = booking_data.employee_id
+    booking.topic = booking_data.topic
+    booking.start_time = booking_data.start_time
+    booking.end_time = booking_data.end_time
 
     db.commit()
     db.refresh(booking)
