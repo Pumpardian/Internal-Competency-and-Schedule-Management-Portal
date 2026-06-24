@@ -1,4 +1,8 @@
-import { defineConfig } from "vitest/config";
+/// <reference types="vitest/config" />
+// defineConfig берём из "vite", а не из "vitest/config": так dev-сервер
+// стартует даже без установленного vitest (это лишь dev-зависимость для тестов).
+// Поле `test` ниже типизируется через ссылку на типы vitest/config выше.
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 // Доступ к переменным окружения сборки без зависимости от @types/node.
