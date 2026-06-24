@@ -110,7 +110,7 @@ export function RoomPage({ employees, push }: RoomPageProps) {
           Не удалось загрузить брони: {error}
           <div style={{ marginTop: 10 }}>
             <button className="btn" onClick={reload}>
-              Повторить
+              {t("btn.retry")}
             </button>
           </div>
         </div>

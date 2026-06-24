@@ -64,7 +64,7 @@ export function EmployeesPage() {
     return (
       <div className="page">
         <button className="btn" onClick={() => setSelectedId(null)}>
-          ← Назад к списку
+          {t("btn.backToList")}
         </button>
         <div style={{ marginTop: 16 }}>
           <EmployeeCard employeeId={selectedId} />

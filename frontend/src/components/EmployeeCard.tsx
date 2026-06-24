@@ -8,6 +8,7 @@
 import { useMemo, useState } from "react";
 import { CATEGORY_LABEL, HEAT, HEAT_TEXT, SKILL_CATEGORIES } from "../data";
 import { useProfile } from "../hooks/useProfile";
+import { useT } from "../i18n";
 import type { Employee } from "../types";
 
 /** Инициалы для аватара-заглушки, напр. «Петров Сергей» → «ПС». */
@@ -65,6 +66,7 @@ interface EmployeeCardProps {
 /** Карточка одного сотрудника с его навыками. */
 export function EmployeeCard({ employeeId }: EmployeeCardProps) {
   const { employee, skills, loading, error, reload } = useProfile(employeeId);
+  const { t } = useT();
 
   // Сортировка навыков (по умолчанию — сильные сверху) и фильтр по типу.
   const [skillSort, setSkillSort] = useState<SkillSort>("level-desc");
@@ -83,7 +85,7 @@ export function EmployeeCard({ employeeId }: EmployeeCardProps) {
           Не удалось загрузить профиль: {error}
           <div style={{ marginTop: 10 }}>
             <button className="btn" onClick={() => void reload()}>
-              Повторить
+              {t("btn.retry")}
             </button>
           </div>
         </div>

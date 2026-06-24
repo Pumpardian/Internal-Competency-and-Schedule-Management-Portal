@@ -341,7 +341,7 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
           </label>
 
           <button className="btn primary" type="submit" disabled={saving}>
-            {saving ? "Сохранение…" : "Сохранить изменения"}
+            {saving ? t("btn.saving") : t("btn.saveChanges")}
           </button>
         </form>
       )}
@@ -417,7 +417,7 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
             type="submit"
             disabled={changingRole || !targetUserId || targetRoleId === ""}
           >
-            {changingRole ? "Применение…" : "Сменить роль"}
+            {changingRole ? t("btn.applying") : t("btn.changeRole")}
           </button>
         </form>
       )}
@@ -441,7 +441,7 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
             />
           </label>
           <button className="btn danger" type="submit" disabled={deleting || !deletePassword}>
-            {deleting ? "Удаление…" : "Удалить аккаунт"}
+            {deleting ? t("btn.deleting") : t("btn.deleteAccount")}
           </button>
         </form>
       )}

@@ -9,6 +9,7 @@
 import { useState } from "react";
 import type { BookingDraft, Employee, TimeRange } from "../types";
 import { fmt } from "../utils";
+import { useT } from "../i18n";
 
 interface BookingModalProps {
   /** Список сотрудников для выпадающего списка организатора. */
@@ -28,6 +29,7 @@ interface BookingModalProps {
 
 /** Форма создания новой брони. */
 export function BookingModal({ employees, date, init, lockedEmployee, onClose, onSubmit }: BookingModalProps) {
+  const { t } = useT();
   const [topic, setTopic] = useState("");
   // Организатор: при ограничении — фиксированный сотрудник, иначе первый из справочника.
   const [empId, setEmpId] = useState<number>(lockedEmployee?.id ?? employees[0]?.id ?? 0);
@@ -121,10 +123,10 @@ export function BookingModal({ employees, date, init, lockedEmployee, onClose, o
         </div>
         <div className="m-foot">
           <button className="btn" onClick={onClose}>
-            Отмена
+            {t("btn.cancel")}
           </button>
           <button className="btn primary" onClick={submit}>
-            Сохранить
+            {t("btn.save")}
           </button>
         </div>
       </div>
