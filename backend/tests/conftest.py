@@ -81,6 +81,7 @@ def app_client():
         "admin_user": admin_user, "admin_emp": admin_emp,
         "mgr_user": mgr_user, "mgr_emp": mgr_emp,
         "usr_user": usr_user, "usr_emp": usr_emp,
+        "admin_role": role_ids["admin"], "manager_role": role_ids["manager"], "user_role": role_ids["user"],
     }
     db.close()
 
@@ -120,10 +121,18 @@ def headers(app_client):
 
 
 @pytest.fixture(autouse=True)
-def clean_bookings(app_client):
-    """Очищает брони перед каждым тестом (БД общая на сессию)."""
+def clean_db(app_client):
+    """Очищает изменяемые таблицы перед каждым тестом (БД общая на сессию).
+
+    Сиды (роли, права, пользователи и их сотрудники) сохраняются: удаляются
+    только брони, связи навыков, навыки и созданные в тестах сотрудники
+    (у сидов-сотрудников проставлен user_id, у тестовых — нет).
+    """
     db = TestSession()
     db.execute(text('DELETE FROM "Bookings"'))
+    db.execute(text("DELETE FROM employee_skills"))
+    db.execute(text("DELETE FROM skills"))
+    db.execute(text("DELETE FROM employees WHERE user_id IS NULL"))
     db.commit()
     db.close()
     yield
