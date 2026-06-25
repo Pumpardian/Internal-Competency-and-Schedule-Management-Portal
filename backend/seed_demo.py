@@ -33,7 +33,7 @@ ADMIN_USER = os.getenv("SEED_ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.getenv("SEED_ADMIN_PASSWORD", "admin")
 
 # Общий пароль для всех демо-учёток сотрудников.
-PASSWORD = os.getenv("SEED_USER_PASSWORD", "password")
+PASSWORD = os.getenv("SEED_USER_PASSWORD", "Passw0rd!")
 
 # Воспроизводимость демо-набора.
 random.seed(42)

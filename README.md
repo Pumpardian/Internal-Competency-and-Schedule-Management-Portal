@@ -125,3 +125,44 @@ docker compose docker-compose-prod.yaml up -d
 Списки сотрудников и навыков постраничные: параметры `current_page`
 (по умолчанию 1) и `page_size` (1–20, по умолчанию 10); ответ —
 `{ page_size, current_page, total_pages, data: [...] }`.
+
+## Тесты бэкенда
+
+Интеграционные тесты лежат в `backend/tests/` (pytest + FastAPI TestClient).
+Они поднимают схему и ходят в **отдельную базу `portal_test`** на том же
+сервере Postgres — рабочую БД не трогают. База `portal_test` **создаётся
+автоматически** при первом запуске (см. `conftest.py`), вручную её заводить
+не нужно.
+
+Тестам нужны те же переменные окружения, что и приложению: `DATABASE_URL`,
+`AUTH_SECRET`, `AUTH_ALGORITHM`.
+
+**В контейнере backend** (окружение уже настроено из `.env`):
+
+```bash
+docker compose -f docker-compose.yaml exec backend pip install -r requirements-dev.txt
+docker compose -f docker-compose.yaml exec backend pytest
+```
+
+> `pytest` не входит в образ (только runtime-зависимости), поэтому
+> `requirements-dev.txt` ставится отдельно. Установка живёт до пересоздания
+> контейнера.
+
+**Локально** (нужен доступный Postgres; при поднятом dev-стеке он на
+`localhost:5433`):
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate            # Windows; на *nix: source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+pytest
+```
+
+Для локального запуска в `backend/.env` должны быть заданы `DATABASE_URL`
+(например `postgresql://admin:admin@localhost:5433/postgres`), а также
+`AUTH_SECRET` и `AUTH_ALGORITHM` (например `HS256`) — иначе при выпуске JWT
+тесты упадут с `jose.JWSError`.
+
+Запускать строго из каталога `backend/` (там лежит `pytest.ini` с
+`pythonpath = .`, без него `import main` в `conftest.py` не находится).

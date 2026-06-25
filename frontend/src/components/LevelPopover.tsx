@@ -6,6 +6,7 @@
  */
 import { useState } from "react";
 import type { Employee, Skill } from "../types";
+import { useT } from "../i18n";
 
 interface LevelPopoverProps {
   /** Сотрудник, чей навык редактируется. */
@@ -34,6 +35,7 @@ export function LevelPopover({
   canRemove,
   onRemove,
 }: LevelPopoverProps) {
+  const { t } = useT();
   // Локальное состояние ползунка для отображения значения рядом с ним.
   const [v, setV] = useState(value);
 
@@ -58,13 +60,13 @@ export function LevelPopover({
       <div className="pv-row">
         <span className="pv-val">{v}</span>
         <button className="btn small primary" onClick={() => onClose(v)}>
-          Готово
+          {t("btn.done")}
         </button>
       </div>
       {canRemove && onRemove && (
         <div className="pv-row" style={{ marginTop: 8 }}>
           <button className="btn small danger" onClick={onRemove}>
-            Снять навык
+            {t("btn.removeSkill")}
           </button>
         </div>
       )}

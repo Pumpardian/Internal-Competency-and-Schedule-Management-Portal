@@ -18,6 +18,9 @@ import {
   type ApiRole,
   type ApiUserListItem,
 } from "../api";
+import { useT } from "../i18n";
+import { isPasswordStrong } from "../password";
+import { PasswordStrength } from "./PasswordStrength";
 import type { Employee, ToastInput } from "../types";
 
 interface AccountPageProps {
@@ -39,6 +42,7 @@ function initials(first: string, last: string): string {
 
 /** Страница управления собственным аккаунтом. */
 export function AccountPage({ push, onLogout }: AccountPageProps) {
+  const { t } = useT();
   const me = currentUser();
   // Профиль сотрудника текущего пользователя (или null, если его нет).
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -169,6 +173,11 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
       push({ type: "error", title: "Нужен пароль", msg: "Введите текущий пароль для подтверждения изменений." });
       return;
     }
+    // Если задан новый пароль — проверяем его сложность (как на бэкенде).
+    if (newPassword && !isPasswordStrong(newPassword)) {
+      push({ type: "error", title: "Слабый пароль", msg: t("password.weak") });
+      return;
+    }
     setSaving(true);
     try {
       const employeeChanges = employee
@@ -234,7 +243,7 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
 
   return (
     <div className="page">
-      <h1>Аккаунт</h1>
+      <h1>{t("account.title")}</h1>
       <p className="subtitle">
         Управление собственной учётной записью.{" "}
         <span className="api-hint">PATCH /users/&#123;id&#125;/profile</span>
@@ -317,6 +326,8 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
             />
           </label>
 
+          <PasswordStrength password={newPassword} />
+
           <label className="auth-field">
             <span>Текущий пароль (обязательно для сохранения)</span>
             <input
@@ -330,7 +341,7 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
           </label>
 
           <button className="btn primary" type="submit" disabled={saving}>
-            {saving ? "Сохранение…" : "Сохранить изменения"}
+            {saving ? t("btn.saving") : t("btn.saveChanges")}
           </button>
         </form>
       )}
@@ -406,7 +417,7 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
             type="submit"
             disabled={changingRole || !targetUserId || targetRoleId === ""}
           >
-            {changingRole ? "Применение…" : "Сменить роль"}
+            {changingRole ? t("btn.applying") : t("btn.changeRole")}
           </button>
         </form>
       )}
@@ -430,7 +441,7 @@ export function AccountPage({ push, onLogout }: AccountPageProps) {
             />
           </label>
           <button className="btn danger" type="submit" disabled={deleting || !deletePassword}>
-            {deleting ? "Удаление…" : "Удалить аккаунт"}
+            {deleting ? t("btn.deleting") : t("btn.deleteAccount")}
           </button>
         </form>
       )}

@@ -9,6 +9,7 @@
 import { useState } from "react";
 import { CATEGORY_LABEL, HEAT, HEAT_TEXT, SKILL_CATEGORIES } from "../data";
 import { useAccess } from "../hooks/useAccess";
+import { useT } from "../i18n";
 import type { Employee, Levels, Skill, ToastInput } from "../types";
 import { EntityModal, type FormField } from "./EntityModal";
 import { LevelPopover } from "./LevelPopover";
@@ -21,7 +22,10 @@ type ModalState =
   | { kind: "editSkill"; skill: Skill };
 
 /** Заголовок, подпись кнопки и поля формы для текущего состояния модалки. */
-function modalConfig(modal: ModalState): {
+function modalConfig(
+  modal: ModalState,
+  t: (key: string) => string,
+): {
   title: string;
   submitLabel: string;
   fields: FormField[];
@@ -30,7 +34,7 @@ function modalConfig(modal: ModalState): {
     case "addEmployee":
       return {
         title: "Новый сотрудник",
-        submitLabel: "Добавить",
+        submitLabel: t("btn.add"),
         fields: [
           { name: "lastName", label: "Фамилия", value: "", required: true, placeholder: "Иванов" },
           { name: "firstName", label: "Имя", value: "", required: true, placeholder: "Иван" },
@@ -40,7 +44,7 @@ function modalConfig(modal: ModalState): {
     case "editEmployee":
       return {
         title: "Изменить сотрудника",
-        submitLabel: "Сохранить",
+        submitLabel: t("btn.save"),
         fields: [
           { name: "lastName", label: "Фамилия", value: modal.emp.lastName, required: true },
           { name: "firstName", label: "Имя", value: modal.emp.firstName, required: true },
@@ -50,7 +54,7 @@ function modalConfig(modal: ModalState): {
     case "addSkill":
       return {
         title: "Новый навык",
-        submitLabel: "Добавить",
+        submitLabel: t("btn.add"),
         fields: [
           { name: "name", label: "Название", value: "", required: true, placeholder: "Python" },
           {
@@ -65,7 +69,7 @@ function modalConfig(modal: ModalState): {
     case "editSkill":
       return {
         title: "Изменить навык",
-        submitLabel: "Сохранить",
+        submitLabel: t("btn.save"),
         fields: [
           { name: "name", label: "Название", value: modal.skill.name, required: true },
           {
@@ -229,6 +233,7 @@ export function TeamPage({
 
   // Права текущего пользователя — какие изменения матрицы ему доступны.
   const { can } = useAccess();
+  const { t } = useT();
   const canAddEmployee = can("employee.create");
   const canAddSkill = can("skill.create");
   const canEditEmployee = can("employee.update");
@@ -341,7 +346,7 @@ export function TeamPage({
 
   return (
     <div className="page">
-      <h1>Команда и навыки</h1>
+      <h1>{t("team.title")}</h1>
       <p className="subtitle">
         Матрица компетенций сотрудников. Ячейка раскрашена по уровню владения (тепловая карта). Клик
         по ячейке — изменение уровня.{" "}
@@ -351,16 +356,16 @@ export function TeamPage({
       <div className="toolbar">
         {canAddEmployee && (
           <button className="btn primary" onClick={handleAddEmployee}>
-            + Добавить сотрудника
+            {t("btn.addEmployee")}
           </button>
         )}
         {canAddSkill && (
           <button className="btn" onClick={handleAddSkill}>
-            + Добавить навык
+            {t("btn.addSkill")}
           </button>
         )}
         <button className="btn" onClick={onReload}>
-          Обновить
+          {t("btn.refresh")}
         </button>
         <input
           className="input search"
@@ -386,7 +391,7 @@ export function TeamPage({
           Не удалось загрузить данные: {error}
           <div style={{ marginTop: 10 }}>
             <button className="btn" onClick={onReload}>
-              Повторить
+              {t("btn.retry")}
             </button>
           </div>
         </div>
@@ -561,7 +566,7 @@ export function TeamPage({
       {/* Модальная форма добавления/редактирования сотрудника или навыка. */}
       {modal && (
         <EntityModal
-          {...modalConfig(modal)}
+          {...modalConfig(modal, t)}
           onClose={() => setModal(null)}
           onSubmit={submitModal}
         />
@@ -575,10 +580,10 @@ export function TeamPage({
             <div className="m-body">{pendingDelete.message}</div>
             <div className="m-foot">
               <button className="btn" onClick={() => setPendingDelete(null)}>
-                Отмена
+                {t("btn.cancel")}
               </button>
               <button className="btn danger" onClick={runPendingDelete}>
-                Удалить
+                {t("btn.delete")}
               </button>
             </div>
           </div>
