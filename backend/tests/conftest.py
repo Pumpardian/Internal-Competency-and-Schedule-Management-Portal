@@ -25,6 +25,26 @@ TEST_DATABASE_URL = os.environ["DATABASE_URL"].rsplit("/", 1)[0] + "/portal_test
 engine = create_engine(TEST_DATABASE_URL)
 TestSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
+def _ensure_test_db():
+    """Создаёт базу portal_test, если её ещё нет.
+
+    CREATE DATABASE нельзя выполнять внутри транзакции, поэтому подключаемся к
+    «рабочей» базе из DATABASE_URL в режиме AUTOCOMMIT. Так разработчику не нужно
+    заводить тестовую базу вручную — достаточно запустить pytest.
+    """
+    db_name = TEST_DATABASE_URL.rsplit("/", 1)[1]
+    admin_engine = create_engine(os.environ["DATABASE_URL"], isolation_level="AUTOCOMMIT")
+    try:
+        with admin_engine.connect() as conn:
+            exists = conn.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :name"), {"name": db_name}
+            ).scalar()
+            if not exists:
+                conn.execute(text(f'CREATE DATABASE "{db_name}"'))
+    finally:
+        admin_engine.dispose()
+
 PERMISSIONS = [
     "employee.create", "employee.update", "employee.delete",
     "booking.create", "booking.update", "booking.delete",
@@ -37,6 +57,7 @@ PERMISSIONS = [
 @pytest.fixture(scope="session")
 def app_client():
     """Поднимает схему, сидит роли/права/пользователей и отдаёт TestClient."""
+    _ensure_test_db()
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
