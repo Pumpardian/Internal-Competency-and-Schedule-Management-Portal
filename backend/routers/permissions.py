@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Path, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_, func
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import List
 from math import ceil
 
@@ -30,8 +30,7 @@ class PermissionResponse(BaseModel):
     id: int = Field(..., description="Уникальный идентификатор права", examples=[1])
     name: str = Field(..., description="Название права", examples=["Изменение данных отдела"])
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 class DeletePermissionResponse(BaseModel):
     """Модель ответа при удалении права"""

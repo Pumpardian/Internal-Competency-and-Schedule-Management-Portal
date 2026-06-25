@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_, func, distinct
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import List, Optional
 from math import ceil
 
@@ -52,8 +52,7 @@ class EmployeeResponse(BaseModel):
     photo_url: Optional[str] = Field(None, description="Ссылка на фото", examples=["https://example.com/photo.jpg"])
     created_at: datetime = Field(..., description="Дата и время создания записи")
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 class DeleteEmployeeResponse(BaseModel):
     """Модель ответа при удалении сотрудника"""

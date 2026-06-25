@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
 from datetime import datetime, date, timedelta
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import List
 
 from models import Booking, User
@@ -37,8 +37,7 @@ class BookingResponse(BaseModel):
     start_time: datetime = Field(..., description="Время начала", examples=["2024-01-15T10:00:00"])
     end_time: datetime = Field(..., description="Время окончания", examples=["2024-01-15T11:00:00"])
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 class DeleteBookingResponse(BaseModel):
     """Модель ответа при удалении брони"""
