@@ -14,7 +14,22 @@
   --badge-bg: #eef5ff;
   --header-bg: var(--dark);
   --danger: #cf1322;
+  --danger-bg: #fff0f0;
+  --danger-border: #f3c2c2;
   --success: #52c41a;
+  /* Тепловая карта уровней владения (0..5). */
+  --heat-0: #ffffff;
+  --heat-1: #edf8e9;
+  --heat-2: #c7e9c0;
+  --heat-3: #74c476;
+  --heat-4: #41ab5d;
+  --heat-5: #006d2c;
+  --heat-text-0: #bbbbbb;
+  --heat-text-1: #1f1f1f;
+  --heat-text-2: #1f1f1f;
+  --heat-text-3: #ffffff;
+  --heat-text-4: #ffffff;
+  --heat-text-5: #ffffff;
 }
 
 /* Тёмная тема: переопределяем палитру, компоненты используют переменные. */
@@ -30,6 +45,22 @@
   --muted: #8a97a6;
   --badge-bg: #16314f;
   --header-bg: #0b1320;
+  --danger-bg: #3a1d1d;
+  --danger-border: #5c2b2b;
+  /* Тепловая карта в тёмной теме: уровень 0 сливается с поверхностью,
+     дальше — от тёмно-зелёного к насыщенному. Без светлых/белых клеток. */
+  --heat-0: #1b212b;
+  --heat-1: #16331f;
+  --heat-2: #1d5233;
+  --heat-3: #2f8f57;
+  --heat-4: #3fae6a;
+  --heat-5: #57c97f;
+  --heat-text-0: #8a97a6;
+  --heat-text-1: #bfe6cb;
+  --heat-text-2: #e6f5ec;
+  --heat-text-3: #06210f;
+  --heat-text-4: #06210f;
+  --heat-text-5: #06210f;
 }
 
 * { box-sizing: border-box; }
@@ -131,8 +162,25 @@ body {
   padding: 6px 10px;
   font-size: 14px;
   outline: none;
+  background: var(--surface);
+  color: var(--text);
 }
 .input:focus { border-color: var(--primary); }
+.input::placeholder { color: var(--muted); }
+/* Выпадающий список select-а: пункты в цветах темы. */
+.input option { background: var(--surface); color: var(--text); }
+/* Кнопка выбора файла («Обзор…») в input[type=file]. */
+.input[type="file"] { padding: 5px 10px; }
+.input[type="file"]::file-selector-button {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 5px;
+  padding: 3px 10px;
+  margin-right: 10px;
+  cursor: pointer;
+}
+.input[type="file"]::file-selector-button:hover { border-color: var(--primary); color: var(--primary); }
 .toolbar .search { margin-left: auto; width: 220px; }
 
 .card {
@@ -207,7 +255,7 @@ body {
 
 /* Легенда тепловой карты */
 .legend { display: flex; align-items: center; gap: 6px; margin-top: 16px; font-size: 13px; color: var(--muted); }
-.legend .sw { width: 34px; height: 24px; border: 1px solid var(--border-soft); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 600; color: #1f1f1f; }
+.legend .sw { width: 34px; height: 24px; border: 1px solid var(--border-soft); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--text); }
 
 /* ---------- Переговорная ---------- */
 .daybar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
@@ -340,8 +388,8 @@ body {
 .auth-error {
   color: var(--danger);
   font-size: 13px;
-  background: #fff0f0;
-  border: 1px solid #f3c2c2;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
   border-radius: 4px;
   padding: 8px 10px;
 }
@@ -391,7 +439,7 @@ body {
 .account-photo { display: flex; align-items: center; gap: 12px; }
 .account-photo .emp-avatar { width: 56px; height: 56px; font-size: 18px; }
 .account-photo .input { flex: 1; }
-.account-danger { display: flex; flex-direction: column; gap: 14px; max-width: 420px; border: 1px solid #f3c2c2; }
+.account-danger { display: flex; flex-direction: column; gap: 14px; max-width: 420px; border: 1px solid var(--danger-border); }
 .account-danger .profile-section-title { color: var(--danger); }
 
 /* ---------- Список сотрудников ---------- */
