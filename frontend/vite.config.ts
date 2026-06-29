@@ -1,3 +1,7 @@
+/// <reference types="vitest/config" />
+// defineConfig берём из "vite", а не из "vitest/config": так dev-сервер
+// стартует даже без установленного vitest (это лишь dev-зависимость для тестов).
+// Поле `test` ниже типизируется через ссылку на типы vitest/config выше.
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -21,5 +25,9 @@ export default defineConfig({
     // На Windows-хосте события файловой системы не доходят до контейнера через
     // bind-mount, поэтому следим за изменениями опросом (иначе нет хот-релоада).
     watch: { usePolling: true },
+  },
+  test: {
+    environment: "jsdom",
+    setupFiles: ["./src/test/setup.ts"],
   },
 });

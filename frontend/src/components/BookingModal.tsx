@@ -7,8 +7,9 @@
  * вызывающий компонент).
  */
 import { useState } from "react";
-import type { BookingDraft, Employee, TimeRange } from "../types";
+import type { Booking, BookingDraft, Employee, TimeRange } from "../types";
 import { fmt } from "../utils";
+import { useT } from "../i18n";
 
 interface BookingModalProps {
   /** Список сотрудников для выпадающего списка организатора. */
@@ -17,22 +18,27 @@ interface BookingModalProps {
   date: string;
   /** Предзаполненный интервал (час, на который кликнули). */
   init: TimeRange;
+  /** Если задан — режим редактирования: поля предзаполняются из этой брони. */
+  existing?: Booking;
   /** Если задан — организатор зафиксирован на этом сотруднике (нет права
    *  бронировать за других); выбор сотрудника не показывается. */
   lockedEmployee?: Employee | null;
   /** Закрыть окно без сохранения. */
   onClose: () => void;
-  /** Отправить заполненную бронь на создание. */
+  /** Отправить заполненную бронь (на создание или изменение). */
   onSubmit: (data: BookingDraft) => void;
 }
 
-/** Форма создания новой брони. */
-export function BookingModal({ employees, date, init, lockedEmployee, onClose, onSubmit }: BookingModalProps) {
-  const [topic, setTopic] = useState("");
-  // Организатор: при ограничении — фиксированный сотрудник, иначе первый из справочника.
-  const [empId, setEmpId] = useState<number>(lockedEmployee?.id ?? employees[0]?.id ?? 0);
-  const [start, setStart] = useState(fmt(init.startH, init.startM));
-  const [end, setEnd] = useState(fmt(init.endH, init.endM));
+/** Форма создания/редактирования брони. */
+export function BookingModal({ employees, date, init, existing, lockedEmployee, onClose, onSubmit }: BookingModalProps) {
+  const { t } = useT();
+  const [topic, setTopic] = useState(existing?.topic ?? "");
+  // Организатор: из редактируемой брони, иначе фиксированный/первый из справочника.
+  const [empId, setEmpId] = useState<number>(
+    existing?.empId ?? lockedEmployee?.id ?? employees[0]?.id ?? 0,
+  );
+  const [start, setStart] = useState(fmt(existing?.startH ?? init.startH, existing?.startM ?? init.startM));
+  const [end, setEnd] = useState(fmt(existing?.endH ?? init.endH, existing?.endM ?? init.endM));
   // Текст ошибки клиентской валидации.
   const [err, setErr] = useState("");
 
@@ -56,7 +62,7 @@ export function BookingModal({ employees, date, init, lockedEmployee, onClose, o
     // Клик по затемнению закрывает окно; клик по самому окну — нет (stopPropagation).
     <div className="overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="m-head">Новая бронь · {date}</div>
+        <div className="m-head">{(existing ? t("room.bookingEdit") : t("room.bookingNew")) + " · " + date}</div>
         <div className="m-body">
           <div>
             <label>Тема встречи</label>
@@ -121,10 +127,10 @@ export function BookingModal({ employees, date, init, lockedEmployee, onClose, o
         </div>
         <div className="m-foot">
           <button className="btn" onClick={onClose}>
-            Отмена
+            {t("btn.cancel")}
           </button>
           <button className="btn primary" onClick={submit}>
-            Сохранить
+            {t("btn.save")}
           </button>
         </div>
       </div>

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Path
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List
 
 from models import Role, Permission, RolePermission
@@ -17,16 +17,14 @@ class RolePermissionResponse(BaseModel):
     id: int = Field(..., description="Уникальный идентификатор роли", examples=[1])
     name: str = Field(..., description="Название права", examples=[["employee.update", "employee.delete"]])
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 # class RolePermissionDetailResponse(BaseModel):
 #     """Детальная модель ответа с информацией о связи роли и права"""
 #     employee_id: int = Field(..., description="Уникальный идентификатор роли", examples=[123])
 #     skill_id: int = Field(..., description="Уникальный идентификатор права", examples=[1])
     
-#     class Config:
-#         from_attributes = True
+#     model_config = ConfigDict(from_attributes = True)
 
 # class DeleteRolePermissionResponse(BaseModel):
 #     """Модель ответа при удалении права роли"""

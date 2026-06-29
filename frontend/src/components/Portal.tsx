@@ -18,15 +18,22 @@ import { TeamPage } from "./TeamPage";
 import { Toasts } from "./Toasts";
 import { useCompetency } from "../hooks/useCompetency";
 import { useToasts } from "../hooks/useToasts";
+import type { Theme } from "../hooks/useTheme";
+import { useT } from "../i18n";
 import type { Page } from "../types";
 
 interface PortalProps {
   /** Выход из системы (сброс токена и возврат на экран входа). */
   onLogout: () => void;
+  /** Текущая тема (для переключателя в шапке). */
+  theme?: Theme;
+  /** Переключить тему. */
+  onToggleTheme?: () => void;
 }
 
 /** Портал: шапка, активная страница и слой уведомлений. */
-export function Portal({ onLogout }: PortalProps) {
+export function Portal({ onLogout, theme, onToggleTheme }: PortalProps) {
+  const { t } = useT();
   // Активная страница.
   const [page, setPage] = useState<Page>("team");
   // Открытый профиль сотрудника (по клику из матрицы); null — обычные страницы.
@@ -65,12 +72,20 @@ export function Portal({ onLogout }: PortalProps) {
 
   return (
     <>
-      <Header page={page} setPage={goTo} username={username} onLogout={onLogout} />
+      <Header
+        page={page}
+        setPage={goTo}
+        username={username}
+        onLogout={onLogout}
+        theme={theme}
+        onToggleTheme={onToggleTheme}
+        onOpenEmployee={setProfileEmpId}
+      />
       {/* Открытый профиль сотрудника (из матрицы) поверх обычных страниц. */}
       {profileEmpId !== null ? (
         <div className="page">
           <button className="btn" onClick={() => setProfileEmpId(null)}>
-            ← Назад
+            {t("btn.back")}
           </button>
           <div style={{ marginTop: 16 }}>
             <EmployeeCard employeeId={profileEmpId} />

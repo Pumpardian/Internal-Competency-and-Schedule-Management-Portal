@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Path
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 
 from models import Employee, Skill, EmployeeSkill
@@ -19,8 +19,7 @@ class EmployeeSkillResponse(BaseModel):
     category: Optional[str] = Field(None, description="Категория навыка", examples=["language"])
     level: int = Field(..., description="Уровень владения (0-5)", ge=0, le=5, examples=[3])
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 class EmployeeSkillCreateOrUpdate(BaseModel):
     """Модель для добавления/изменения навыка сотруднику"""
@@ -32,8 +31,7 @@ class EmployeeSkillDetailResponse(BaseModel):
     skill_id: int = Field(..., description="Уникальный идентификатор навыка", examples=[1])
     level: int = Field(..., description="Уровень владения", ge=0, le=5, examples=[3])
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 class DeleteEmployeeSkillResponse(BaseModel):
     """Модель ответа при удалении навыка сотрудника"""

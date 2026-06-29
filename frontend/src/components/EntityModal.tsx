@@ -6,6 +6,7 @@
  * BookingModal (классы .overlay/.modal/...).
  */
 import { useState } from "react";
+import { useT } from "../i18n";
 
 /** Описание одного поля формы. */
 export interface FormField {
@@ -40,6 +41,7 @@ interface EntityModalProps {
 
 /** Модальная форма с произвольным набором полей. */
 export function EntityModal({ title, fields, submitLabel, onClose, onSubmit }: EntityModalProps) {
+  const { t } = useT();
   // Текущие значения полей, инициализируются из fields.
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(fields.map((f) => [f.name, f.value])),
@@ -104,7 +106,7 @@ export function EntityModal({ title, fields, submitLabel, onClose, onSubmit }: E
         </div>
         <div className="m-foot">
           <button className="btn" onClick={onClose}>
-            Отмена
+            {t("btn.cancel")}
           </button>
           <button className="btn primary" onClick={submit}>
             {submitLabel}

@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_
 from datetime import datetime, date, timedelta
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import List
 
 from models import Booking, User
@@ -37,8 +37,7 @@ class BookingResponse(BaseModel):
     start_time: datetime = Field(..., description="Время начала", examples=["2024-01-15T10:00:00"])
     end_time: datetime = Field(..., description="Время окончания", examples=["2024-01-15T11:00:00"])
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True)
 
 class DeleteBookingResponse(BaseModel):
     """Модель ответа при удалении брони"""
@@ -189,6 +188,11 @@ async def update_booking(
     
     statement = select(Booking).where(Booking.id == id)
     booking = db.execute(statement).scalar_one_or_none()
+    if not booking:
+        raise HTTPException(
+            status_code=404,
+            detail="Бронь не найдена"
+        )
 
     statement = select(User).where(User.id == user["id"])
     user: User = db.execute(statement).scalar_one_or_none()
@@ -202,6 +206,7 @@ async def update_booking(
 
     statement = select(Booking).where(
         and_(
+            Booking.id != id,
             Booking.start_time < booking_data.end_time,
             Booking.end_time > booking_data.start_time
         )
@@ -217,10 +222,10 @@ async def update_booking(
                        до {booking_data.topic} для сотрудника с ID {booking_data.employee_id} на {booking_data.start_time} \
                        продолжительностью {booking_data.end_time - booking_data.start_time}")
         
-    booking.employee_id=booking_data.employee_id,
-    booking.topic=booking_data.topic,
-    booking.start_time=booking_data.start_time,
-    booking.end_time=booking_data.end_time
+    booking.employee_id = booking_data.employee_id
+    booking.topic = booking_data.topic
+    booking.start_time = booking_data.start_time
+    booking.end_time = booking_data.end_time
 
     db.commit()
     db.refresh(booking)

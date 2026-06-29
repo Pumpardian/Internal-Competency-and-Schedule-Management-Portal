@@ -7,6 +7,8 @@
  */
 import { useEffect, useState } from "react";
 import { fetchEmployees } from "../api";
+import { exportEmployeesToExcel } from "../exportEmployees";
+import { useT } from "../i18n";
 import type { Employee } from "../types";
 import { EmployeeCard } from "./EmployeeCard";
 
@@ -20,6 +22,7 @@ function initials(emp: Employee): string {
 
 /** Справочник сотрудников. */
 export function EmployeesPage() {
+  const { t } = useT();
   const [all, setAll] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +64,7 @@ export function EmployeesPage() {
     return (
       <div className="page">
         <button className="btn" onClick={() => setSelectedId(null)}>
-          ← Назад к списку
+          {t("btn.backToList")}
         </button>
         <div style={{ marginTop: 16 }}>
           <EmployeeCard employeeId={selectedId} />
@@ -80,14 +83,14 @@ export function EmployeesPage() {
 
   return (
     <div className="page">
-      <h1>Сотрудники</h1>
-      <p className="subtitle">Справочник сотрудников: поиск, сортировка и переход в карточку.</p>
+      <h1>{t("employees.title")}</h1>
+      <p className="subtitle">{t("employees.subtitle")}</p>
 
       <div className="toolbar">
         <input
           className="input search"
           style={{ marginLeft: 0 }}
-          placeholder="Поиск по имени…"
+          placeholder={t("employees.searchPh")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -100,6 +103,11 @@ export function EmployeesPage() {
           <option value="az">ФИО: А → Я</option>
           <option value="za">ФИО: Я → А</option>
         </select>
+        {!loading && !error && all.length > 0 && (
+          <button className="btn" onClick={() => exportEmployeesToExcel(all)}>
+            {t("employees.export")}
+          </button>
+        )}
         {!loading && !error && (
           <span className="api-hint">
             {list.length} из {all.length}

@@ -8,11 +8,27 @@
  */
 import type { Booking } from "./types";
 
-/** Цвета фона ячеек тепловой карты по уровню владения (индекс 0..5). */
-export const HEAT = ["#ffffff", "#edf8e9", "#c7e9c0", "#74c476", "#41ab5d", "#006d2c"];
+/** Цвета фона ячеек тепловой карты по уровню владения (индекс 0..5).
+ *  Значения — ссылки на CSS-переменные, поэтому палитра автоматически
+ *  меняется вместе с темой (светлая/тёмная), без белых клеток в тёмной. */
+export const HEAT = [
+  "var(--heat-0)",
+  "var(--heat-1)",
+  "var(--heat-2)",
+  "var(--heat-3)",
+  "var(--heat-4)",
+  "var(--heat-5)",
+];
 
 /** Цвета текста для контраста на фоне HEAT (индекс соответствует уровню). */
-export const HEAT_TEXT = ["#bbbbbb", "#1f1f1f", "#1f1f1f", "#ffffff", "#ffffff", "#ffffff"];
+export const HEAT_TEXT = [
+  "var(--heat-text-0)",
+  "var(--heat-text-1)",
+  "var(--heat-text-2)",
+  "var(--heat-text-3)",
+  "var(--heat-text-4)",
+  "var(--heat-text-5)",
+];
 
 /** Категории навыков: значение для бэкенда (англ., см. models.skill_categories)
  *  и русская подпись для интерфейса. */

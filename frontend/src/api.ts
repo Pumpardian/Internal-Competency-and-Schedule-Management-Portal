@@ -266,6 +266,17 @@ export async function createBooking(date: string, draft: BookingDraft): Promise<
   return toBooking(data);
 }
 
+/** PATCH /bookings/{id} — изменить бронь (тема/сотрудник/время). */
+export async function updateBooking(id: number, date: string, draft: BookingDraft): Promise<Booking> {
+  const { data } = await api.patch<ApiBooking>(`/bookings/${id}`, {
+    employee_id: draft.empId,
+    topic: draft.topic,
+    start_time: isoDateTime(date, draft.startH, draft.startM),
+    end_time: isoDateTime(date, draft.endH, draft.endM),
+  });
+  return toBooking(data);
+}
+
 /** DELETE /bookings/{id} — удалить бронь. */
 export async function deleteBooking(id: number): Promise<void> {
   await api.delete(`/bookings/${id}`);
@@ -377,10 +388,22 @@ export interface ApiUserListItem {
 }
 
 /** GET /users — список пользователей (id, логин, ФИО). Доступен при праве
- *  user_role.update — используется для выбора пользователя при смене роли. */
+ *  user_role.update — используется для выбора пользователя при смене роли.
+ *  Эндпоинт отдаёт данные постранично (PagenatedUserResponse), поэтому листаем
+ *  все страницы и собираем полный список (для клиентского поиска по нему). */
 export async function fetchUsers(): Promise<ApiUserListItem[]> {
-  const { data } = await api.get<ApiUserListItem[]>("/users");
-  return data;
+  const acc: ApiUserListItem[] = [];
+  let currentPage = 1;
+  let totalPages = 1;
+  do {
+    const { data } = await api.get<ApiPage<ApiUserListItem>>("/users", {
+      params: { current_page: currentPage, page_size: 20 },
+    });
+    acc.push(...data.data);
+    totalPages = data.total_pages;
+    currentPage += 1;
+  } while (currentPage <= totalPages);
+  return acc;
 }
 
 /** Изменяемые поля профиля сотрудника (все опциональны). */
