@@ -7,9 +7,9 @@ describe("HEAT / HEAT_TEXT", () => {
     expect(HEAT_TEXT).toHaveLength(6);
   });
 
-  it("значения — валидные HEX-цвета", () => {
+  it("значения — ссылки на CSS-переменные темы (меняются со светлой/тёмной)", () => {
     for (const color of [...HEAT, ...HEAT_TEXT]) {
-      expect(color).toMatch(/^#[0-9a-fA-F]{6}$/);
+      expect(color).toMatch(/^var\(--heat(-text)?-[0-5]\)$/);
     }
   });
 });
