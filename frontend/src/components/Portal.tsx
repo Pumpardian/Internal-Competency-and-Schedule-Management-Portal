@@ -16,6 +16,7 @@ import { ProfilePage } from "./ProfilePage";
 import { RoomPage } from "./RoomPage";
 import { TeamPage } from "./TeamPage";
 import { Toasts } from "./Toasts";
+import { useAllEmployees } from "../hooks/useAllEmployees";
 import { useCompetency } from "../hooks/useCompetency";
 import { useToasts } from "../hooks/useToasts";
 import type { Theme } from "../hooks/useTheme";
@@ -68,6 +69,9 @@ export function Portal({ onLogout, theme, onToggleTheme }: PortalProps) {
     skillTotalPages,
     setSkillPage,
   } = useCompetency();
+  // Полный справочник сотрудников для брони (выбор организатора не должен
+  // ограничиваться текущей страницей матрицы компетенций).
+  const { employees: allEmployees } = useAllEmployees();
   const { toasts, push } = useToasts();
 
   return (
@@ -120,7 +124,7 @@ export function Portal({ onLogout, theme, onToggleTheme }: PortalProps) {
               push={push}
             />
           )}
-          {page === "room" && <RoomPage employees={employees} push={push} />}
+          {page === "room" && <RoomPage employees={allEmployees} push={push} />}
           {page === "employees" && <EmployeesPage />}
           {page === "profile" && <ProfilePage />}
           {page === "account" && <AccountPage push={push} onLogout={onLogout} />}

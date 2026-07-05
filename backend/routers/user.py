@@ -569,7 +569,7 @@ async def update_user_profile(
             
         get_logger().info(f"Обновлен сотрудник (ID: {user.employee.id}) {user.employee.last_name} {user.employee.first_name} \
                            и позицией {user.employee.position} для пользователя (ID: {user.id}) {user.username} \
-                           на {validated_data.last_name} {validated_data.first_name} и позицией {validated_data.position}")
+                           на {validated_data.employee_data.last_name} {validated_data.employee_data.first_name} и позицией {validated_data.employee_data.position}")
         
         if validated_data.employee_data.first_name is not None:
             user.employee.first_name = validated_data.employee_data.first_name

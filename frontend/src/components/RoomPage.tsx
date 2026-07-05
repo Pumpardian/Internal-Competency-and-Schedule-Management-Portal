@@ -6,7 +6,7 @@
  * создания; проверку пересечения интервалов делает сервер (ответ 409).
  */
 import { useState } from "react";
-import { CAL_END, CAL_START, HOUR_PX } from "../data";
+import { BOOKING_COLORS, CAL_END, CAL_START, HOUR_PX } from "../data";
 import { useAccess } from "../hooks/useAccess";
 import { useBookings } from "../hooks/useBookings";
 import { useT } from "../i18n";
@@ -151,13 +151,16 @@ export function RoomPage({ employees, push }: RoomPageProps) {
           <div
             style={{ position: "absolute", top: 0, left: 64, right: 0, bottom: 0, pointerEvents: "none" }}
           >
-            {bookings.map((b) => {
+            {[...bookings]
+              .sort((a, b) => a.startH * 60 + a.startM - (b.startH * 60 + b.startM))
+              .map((b, i) => {
               // Положение и высота блока вычисляются из времени брони.
               const top = (b.startH + b.startM / 60 - CAL_START) * HOUR_PX;
               const height = (b.endH + b.endM / 60 - b.startH - b.startM / 60) * HOUR_PX;
               const emp = employees.find((e) => e.id === b.empId);
-              // Цвет блока зависит от чётности id сотрудника (просто для различимости).
-              const color = b.empId % 2 ? "#1677ff" : "#52c41a";
+              // Брони одного дня раскрашиваются по порядку (по времени начала) —
+              // соседние не сливаются; между разными днями цвета могут повторяться.
+              const color = BOOKING_COLORS[i % BOOKING_COLORS.length];
               return (
                 <div
                   key={b.id}
